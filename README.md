@@ -1,163 +1,134 @@
-# tasogare
-
-A native desktop focus tracker for engineers. Log sessions, track projects, and build an interview-ready portfolio of your work — all stored locally on your machine, no account required.
-
-Built with **Tauri v2** (Rust backend) + **React + Vite** (frontend) + **SQLite** (local database).
-
----
-
-> **Platform note:** These instructions are written for **macOS (Apple Silicon — M1/M2/M3/M4)**,
-> which is what this app was developed and tested on. It will also run on macOS Intel, and
-> can be adapted for Linux and Windows, but those platforms are not officially supported yet.
+<div align="center">
+  <img src="src-tauri/icons/icon.png" width="120" alt="tasogare icon" />
+  <h1>tasogare</h1>
+  <p>A native macOS focus tracker for engineers.<br/>
+  Log sessions, track projects, and build a record of your work — all stored locally, no account needed.</p>
+</div>
 
 ---
 
-## What the app does
+![Daily Log](screenshot-daily-log.png)
 
-| Tab | Purpose |
-|---|---|
-| **Daily Log** | Start a timed focus session. Set an intent before you begin, then log what actually happened when you stop. Add multiline debrief notes or bug logs. |
-| **Projects** | Create long-running engineering projects with a short summary and full architecture description. Link sessions to them. |
-| **Interview Deck** | See all your engineering sessions grouped by project — including total hours logged and expandable notes. Built to help you recall stories for interviews or retros. |
+---
+
+## What it does
+
+tasogare is built around a single idea: **commit to one thing, then log what actually happened**. Every session starts with an intent — a one-line statement of what you're about to do. When you stop, you log reality. Over time, the gap between the two becomes your most honest engineering record.
+
+There are three views:
+
+### Daily Log
+Your main workspace. Write an intent, start the 90-minute focus timer, and log what actually happened when you stop. Tag sessions as `[Routine]` or `[Engineering]`. Engineering sessions can be linked to a project so hours accumulate automatically.
+
+![Projects](screenshot-projects.png)
+
+### Projects
+Create long-running engineering projects with a name, a one-line summary, and a full architecture description — goals, blockers, open questions, whatever context you'd want six months from now. Projects show up in a dropdown when you start an Engineering session.
+
+![Interview Deck](screenshot-interview-deck.png)
+
+### Interview Deck
+Every Engineering session, grouped by project. The architecture description sits at the top of each group to set context, followed by a chronological list of every session: intent, reality, notes, and total hours logged. Built so you can walk into any technical conversation and recall exactly what you built, when, and how long it took.
+
+---
+
+## Features
+
+- **90-minute focus timer** with a live progress ring
+- **Intent vs Reality logging** — commit before you start, reflect when you stop
+- **Debrief notes** — multiline bug logs and observations saved per session
+- **Break button** — pauses the timer mid-session and resumes exactly where you left off
+- **Quick Note** (⌘⇧N) — capture a thought instantly without starting a session
+- **Delete sessions** — hover any session row for a two-click confirm delete
+- **Sort controls** — sort projects and interview sessions by date or alphabetically
+- **Keyboard shortcuts** for everything
+- **100% local** — SQLite database on your machine, no servers, no accounts
 
 ---
 
 ## Prerequisites
 
-You need to install four things before you can run the app. Each step below is a one-time setup — once installed, you won't need to repeat it.
+Install these once. You won't need to repeat them.
+
+> **Platform:** macOS (Apple Silicon — M1/M2/M3/M4). Also runs on macOS Intel.  
+> Adaptable to Linux and Windows but not officially tested on those platforms.
 
 ### 1 · Xcode Command Line Tools
-
-These are Apple's developer tools that provide compilers and build utilities that Rust depends on.
-
-Open Terminal and run:
-
 ```bash
 xcode-select --install
 ```
-
-A dialog will appear asking you to install. Click **Install** and wait for it to finish (about 5–10 minutes). If you see `"command line tools are already installed"`, skip this step.
-
----
+A dialog will appear. Click Install and wait (~10 min). Skip if you see "already installed".
 
 ### 2 · Rust
-
-Rust is the language the Tauri backend is written in. The installer also installs **Cargo**, Rust's package manager.
-
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-When prompted, press **Enter** to accept the default installation. When it finishes, run:
-
-```bash
 source "$HOME/.cargo/env"
 ```
+Press Enter to accept defaults. Verify with `rustc --version`.
 
-Verify it worked:
-
+### 3 · Node.js via nvm
 ```bash
-rustc --version
-# should print: rustc 1.xx.x (...)
-```
-
----
-
-### 3 · Node.js (via nvm)
-
-Node.js runs the Vite frontend build system. We install it through **nvm** (Node Version Manager) so you can easily switch Node versions if you ever need to.
-
-**Step 3a — Install nvm:**
-
-```bash
+# Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
-```
 
-**Step 3b — Make nvm available in every terminal window** (this is the step most people miss):
-
-```bash
+# Make it load in every terminal window — don't skip this
 echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.zshrc
 echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.zshrc
 source ~/.zshrc
-```
 
-**Step 3c — Install Node.js 24:**
-
-```bash
+# Install Node 24
 nvm install 24
-nvm use 24
 ```
-
-Verify it worked:
-
-```bash
-node --version   # should print: v24.x.x
-npm --version    # should print: 11.x.x
-```
-
-> **Why this step matters:** Without the lines added to `~/.zshrc`, npm and node will disappear
-> every time you open a new terminal window. The lines above make sure they load automatically.
-
----
+Verify with `node --version` (should print v24+) and `npm --version`.
 
 ### 4 · Tauri CLI
-
-The Tauri CLI is what the `npm run tauri dev` command talks to when launching the app.
-
 ```bash
 npm install -g @tauri-apps/cli@next
-```
-
-Verify:
-
-```bash
-tauri --version
-# should print: tauri-cli x.x.x
 ```
 
 ---
 
 ## Running the app
 
-### Step 1 — Clone the repository
-
 ```bash
-cd ~/Documents
+# 1. Clone
 git clone <your-repo-url> tasogare
 cd tasogare
-```
 
-### Step 2 — Install JavaScript dependencies
-
-```bash
+# 2. Install JS dependencies
 npm install
-```
 
-This installs React, Vite, Tailwind, and the Tauri JS plugins. It reads from `package.json` and takes about 30 seconds.
+# 3. Fetch Rust dependencies (1–3 min, first time only)
+cd src-tauri && cargo fetch && cd ..
 
-### Step 3 — Fetch Rust dependencies
-
-```bash
-cd src-tauri
-cargo fetch
-cd ..
-```
-
-This downloads the Rust crates (tauri, tauri-plugin-sql, SQLite, etc.) from crates.io into your local Cargo cache. Takes 1–3 minutes the first time.
-
-### Step 4 — Launch the app
-
-```bash
+# 4. Launch
 npm run tauri dev
 ```
 
-**What happens when you run this:**
+The first Rust compile takes **3–5 minutes** — this is normal. Every run after that is under 30 seconds.
 
-1. Vite starts a local dev server on port 1420 for the React frontend
-2. Cargo compiles the Rust backend — **this takes 3–5 minutes the first time, which is normal**
-3. The tasogare window opens
+---
 
-Every run after the first is much faster (under 30 seconds) because Rust caches compiled output.
+## Installing to your Mac (dock-pinnable)
+
+To get a proper `.app` you can pin to the dock and open without a terminal:
+
+```bash
+# Build (8–15 min first time)
+npm run tauri build
+
+# Install to Applications
+cp -r src-tauri/target/release/bundle/macos/tasogare.app /Applications/tasogare.app
+
+# Launch
+open /Applications/tasogare.app
+```
+
+Then right-click the dock icon → **Options** → **Keep in Dock**.
+
+Future updates: repeat the `npm run tauri build` and `cp` commands, then relaunch.
+
+> Note: the build will print a DMG warning — this is harmless. The `.app` builds correctly regardless.
 
 ---
 
@@ -165,46 +136,38 @@ Every run after the first is much faster (under 30 seconds) because Rust caches 
 
 ```
 tasogare/
-├── src/                        # React frontend
-│   ├── App.jsx                 # All UI: Daily Log, Projects, Interview Deck
-│   ├── db.js                   # SQLite query layer
-│   ├── index.css               # Tailwind v4 + Rosé Pine Moon design tokens
-│   └── main.jsx                # React entry point
-│
-├── src-tauri/                  # Rust / Tauri backend
+├── src/
+│   ├── App.jsx          # All UI — Daily Log, Projects, Interview Deck
+│   ├── db.js            # SQLite query layer (no fetch calls)
+│   ├── index.css        # Tailwind v4 + Rosé Pine Moon tokens
+│   └── main.jsx         # React entry point
+├── src-tauri/
 │   ├── src/
-│   │   ├── lib.rs              # App setup: registers SQL plugin, ensures DB directory exists
-│   │   └── main.rs             # Cargo binary entry point — just calls lib.rs
+│   │   ├── lib.rs       # Plugin registration + app-data directory setup
+│   │   └── main.rs      # Calls lib.rs
 │   ├── capabilities/
-│   │   └── default.json        # Tauri v2 permission grants for the SQL plugin
-│   ├── Cargo.toml              # Rust dependencies
-│   ├── build.rs                # Tauri build script
-│   └── tauri.conf.json         # App name, window size, CSP, bundle settings
-│
-├── index.html                  # Root HTML — loads Google Fonts and React
-├── vite.config.js              # Vite + Tailwind plugin config
-└── package.json                # Node dependencies and npm scripts
+│   │   └── default.json # Tauri v2 SQL permission grants
+│   ├── icons/           # App icons (all sizes)
+│   ├── Cargo.toml       # Rust dependencies
+│   └── tauri.conf.json  # App name, window, CSP, bundle config
+├── index.html           # Root HTML + Google Fonts
+└── vite.config.js       # Vite + Tailwind plugin
 ```
 
 ---
 
 ## Where your data lives
 
-All data is stored in a local SQLite database. Nothing is sent to any server.
+Everything is local. Nothing leaves your machine.
 
-| Platform | Database location |
+| Platform | Path |
 |---|---|
-| **macOS** | `~/Library/Application Support/com.tasogare.app/whitespace.db` |
+| macOS | `~/Library/Application Support/com.tasogare.app/whitespace.db` |
 | Linux | `~/.local/share/com.tasogare.app/whitespace.db` |
-| Windows | `C:\Users\<you>\AppData\Roaming\com.tasogare.app\whitespace.db` |
+| Windows | `%APPDATA%\com.tasogare.app\whitespace.db` |
 
-**To back up your data:** copy that `.db` file somewhere safe.
-**To reset all data:** delete that `.db` file and relaunch the app — the schema will be recreated automatically.
-
-The database has two tables:
-
-- `projects` — name, short description, long description, created date
-- `sessions` — type (Routine / Engineering), linked project, intent, reality, notes, duration, timestamp
+**Backup:** copy the `.db` file somewhere safe.  
+**Reset:** delete the `.db` file and relaunch — the schema recreates itself automatically.
 
 ---
 
@@ -212,71 +175,44 @@ The database has two tables:
 
 | Shortcut | Action |
 |---|---|
-| `⌥ 1` | Switch to Daily Log |
-| `⌥ 2` | Switch to Projects |
-| `⌥ 3` | Switch to Interview Deck |
-| `⌘ ⇧ N` | Open Quick Note modal |
+| `⌥ 1` | Daily Log |
+| `⌥ 2` | Projects |
+| `⌥ 3` | Interview Deck |
+| `⌘ ⇧ N` | Quick Note |
 | `⌘ ↵` | Save (inside Quick Note modal) |
 | `Esc` | Close modal |
-
----
-
-## Building a distributable app (optional)
-
-If you want to create a `.dmg` installer to share or install permanently:
-
-```bash
-npm run tauri build
-```
-
-Output lands in `src-tauri/target/release/bundle/`. On macOS this produces:
-
-- `tasogare.app` — drag to your Applications folder to install
-- `tasogare_x.x.x_aarch64.dmg` — standard macOS disk image installer
-
-> The first build takes 8–15 minutes. Subsequent builds are faster.
+| `⏎` | Commit intent and start timer |
 
 ---
 
 ## Troubleshooting
 
-**`zsh: command not found: npm`**
-nvm isn't loading in your current shell. Run `source ~/.zshrc` and try again.
-If that doesn't work, repeat Step 3b in the Prerequisites section above.
+**`zsh: command not found: npm`**  
+nvm isn't loading. Run `source ~/.zshrc` and try again.
 
-**`error[E0433]: cannot find module tauri_plugin_opener`**
-The scaffold generated a `lib.rs` that references a plugin not in `Cargo.toml`.
-Make sure `src-tauri/src/lib.rs` is the version from this repo, not the auto-generated one.
+**`error[E0433]: cannot find module tauri_plugin_opener`**  
+The scaffold auto-generated a `lib.rs` with a missing plugin reference. Replace `src-tauri/src/lib.rs` with the version in this repo.
 
-**Compile error mentioning invalid `identifier`**
-`tauri.conf.json` has a bad identifier value. It must be in reverse-domain format
-like `com.tasogare.app` — not a command like `cd tasogare`.
+**Build fails with `safari13` esbuild errors**  
+`vite.config.js` has the wrong build target. Make sure it says `safari16`, not `safari13`.
 
-**First `npm run tauri dev` is taking forever**
-This is expected. Rust is compiling ~200 crates from scratch on your machine.
-It will print lines like `Compiling tokio v1.x.x` for several minutes — let it run.
-Every run after this takes under 30 seconds.
+**App window is white / unstyled**  
+`src/index.css` has the default Vite styles. Replace it with the version from this repo.
 
-**The app window opens but is completely white / unstyled**
-`src/index.css` still has the default Vite scaffold styles instead of the Tailwind
-v4 import. Replace it with the `index.css` from this repo.
-
-**Data disappeared after changing the `identifier` in `tauri.conf.json`**
-The database file path includes the identifier, so changing it makes SQLite open a
-new empty file at the new path. Your old data is still at the old path — copy the
-`.db` file from the old directory to the new one.
+**DMG bundling fails during `npm run tauri build`**  
+Harmless — the `.app` still builds. Add `"targets": ["app"]` under `bundle` in `tauri.conf.json` to skip DMG generation entirely.
 
 ---
 
 ## Tech stack
 
-| Layer | Technology |
+| | |
 |---|---|
-| UI framework | React 18 |
-| Build tool | Vite 7 |
-| Styling | Tailwind CSS v4 (Vite plugin) |
-| Design system | Rosé Pine Moon |
-| Typography | Geist, Geist Mono, Fraunces (Google Fonts) |
-| Desktop shell | Tauri v2 |
-| Backend language | Rust 1.95+ |
+| UI | React 18 |
+| Build | Vite 7 |
+| Styling | Tailwind CSS v4 |
+| Design | Rosé Pine Moon |
+| Fonts | Geist, Geist Mono, Fraunces |
+| Shell | Tauri v2 |
+| Language | Rust 1.95+ |
 | Database | SQLite via tauri-plugin-sql |

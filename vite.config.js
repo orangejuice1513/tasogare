@@ -14,8 +14,9 @@ export default defineConfig({
   envPrefix: ["VITE_", "TAURI_ENV_"],
 
   build: {
-    // Tauri on Apple Silicon targets Safari 13+ WebKit
-    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    // safari16 is the minimum that supports all modern JS used in this app.
+    // safari13 is too old — esbuild cannot transform destructuring to that target.
+    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari16",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
   },

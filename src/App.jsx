@@ -111,7 +111,7 @@ function Sidebar({ active, setActive }) {
 }
 
 // ─── TopBar ──────────────────────────────────────────────────────────────────
-function TopBar({ now, active, onQuickNote }) {
+function TopBar({ now, active, onQuickNote, onBreak, onBreakActive }) {
   const dateStr = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
   const tab = NAV.find(n => n.id === active);
@@ -134,8 +134,14 @@ function TopBar({ now, active, onQuickNote }) {
           {I.note}<span>quick note</span>
           <span className="font-mono text-[10px] text-dim ml-0.5">⌘⇧N</span>
         </button>
-        <button className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] flex items-center gap-2" style={{ color: "#F5A9BB" }}>
-          {I.flag}<span>break</span>
+        <button
+          onClick={onBreak}
+          className="px-3 py-1.5 rounded-[6px] border text-[12px] flex items-center gap-2 transition-colors"
+          style={onBreakActive
+            ? { borderColor: "#F5A9BB", color: "#F5A9BB", background: "#F5A9BB18" }
+            : { borderColor: "#3D4251", color: "#F5A9BB" }}>
+          {onBreakActive ? I.play : I.flag}
+          <span>{onBreakActive ? "resume" : "break"}</span>
         </button>
       </div>
     </header>
@@ -143,24 +149,29 @@ function TopBar({ now, active, onQuickNote }) {
 }
 
 // ─── Timer ring ──────────────────────────────────────────────────────────────
-function TimerRing({ seconds, running }) {
+function TimerRing({ seconds, running, onBreak }) {
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
   const target = 90 * 60, progress = Math.min(seconds / target, 1), C = 2 * Math.PI * 78;
+
+  const statusDot = onBreak ? "bg-rose animate-pulse" : running ? "bg-teal animate-pulse" : "bg-yellow";
+  const statusLabel = onBreak ? "on break" : running ? "running" : "paused";
+
   return (
     <div className="rounded-[10px] border border-border bg-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <span className="label label-up">session timer</span>
         <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${running ? "bg-teal animate-pulse" : "bg-yellow"}`} />
-          <span className="label">{running ? "running" : "paused"}</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`} />
+          <span className="label">{statusLabel}</span>
         </div>
       </div>
       <div className="relative aspect-square w-full max-w-[240px] mx-auto">
         <svg viewBox="0 0 180 180" className="absolute inset-0 -rotate-90">
           <circle cx="90" cy="90" r="78" fill="none" stroke="#2A2D3E" strokeWidth="2" />
-          <circle cx="90" cy="90" r="78" fill="none" stroke="#BAADF4" strokeWidth="2"
+          <circle cx="90" cy="90" r="78" fill="none"
+            stroke={onBreak ? "#F5A9BB" : "#BAADF4"} strokeWidth="2"
             strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - progress)}
-            style={{ transition: "stroke-dashoffset 0.4s linear" }} />
+            style={{ transition: "stroke-dashoffset 0.4s linear, stroke 0.3s ease" }} />
           {Array.from({ length: 60 }).map((_, i) => {
             const a = (i / 60) * Math.PI * 2;
             const x1 = 90 + Math.cos(a) * 84, y1 = 90 + Math.sin(a) * 84;
@@ -170,13 +181,14 @@ function TimerRing({ seconds, running }) {
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="label mb-1.5">elapsed</div>
+          <div className="label mb-1.5">{onBreak ? "paused · on break" : "elapsed"}</div>
           <div className="flex items-baseline gap-1 tnum" style={{ fontFamily: "Geist Mono, monospace" }}>
             <span className="text-[40px] font-light tracking-tight text-text leading-none">{pad(h)}</span>
             <span className="text-[24px] text-dim leading-none">:</span>
             <span className="text-[40px] font-light tracking-tight text-text leading-none">{pad(m)}</span>
             <span className="text-[24px] text-dim leading-none">:</span>
-            <span className="text-[40px] font-light tracking-tight text-blue leading-none">{pad(s)}</span>
+            <span className="text-[40px] font-light tracking-tight leading-none"
+              style={{ color: onBreak ? "#F5A9BB" : "#BAADF4" }}>{pad(s)}</span>
           </div>
           <div className="mt-2 label">target · 90m deep block</div>
           <div className="mt-1 font-mono text-[10.5px] text-sub tnum">{Math.round(progress * 100)}% complete</div>
@@ -331,7 +343,7 @@ const HINTS = [
   "reproduce the duplicate-event bug locally",
 ];
 
-function DailyLog({ projects, onSessionSaved, externalSession }) {
+function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
   const [phase, setPhase]             = useState("idle");
   const [sessionType, setSessionType] = useState("Routine");
   const [projectId, setProjectId]     = useState(null);
@@ -344,6 +356,13 @@ function DailyLog({ projects, onSessionSaved, externalSession }) {
   const [hint, setHint]               = useState(0);
   const [saving, setSaving]           = useState(false);
   const [err, setErr]                 = useState(null);
+
+  // Pause/resume timer whenever the global break toggle changes.
+  // Only affects an active session — does nothing while idle or logging.
+  useEffect(() => {
+    if (phase !== "running") return;
+    setRunning(!breakActive);
+  }, [breakActive]);
 
   // Absorb sessions saved externally (e.g. quick note modal)
   useEffect(() => {
@@ -593,7 +612,7 @@ function DailyLog({ projects, onSessionSaved, externalSession }) {
 
       {/* Timer ring sidebar */}
       <aside className="w-[300px] shrink-0 border-l border-border/70 bg-base/60 p-4 overflow-y-auto">
-        <TimerRing seconds={seconds} running={running} />
+        <TimerRing seconds={seconds} running={running} onBreak={breakActive} />
         <div className="mt-4 rounded-[10px] border border-border bg-surface p-4">
           <div className="label label-up mb-3">today's tally</div>
           <div className="space-y-2">
@@ -976,8 +995,10 @@ export default function App() {
   const [projects, setProjects]           = useState([]);
   const [quickNoteOpen, setQuickNoteOpen] = useState(false);
   const [externalSession, setExternalSession] = useState(null);
-  // Track whether the SQLite schema has been initialised this session
   const [dbReady, setDbReady]             = useState(false);
+  // Break state — lifted here so TopBar can toggle it from anywhere in the app
+  const [onBreak, setOnBreak]             = useState(false);
+  const toggleBreak = () => setOnBreak(b => !b);
 
   // ── 1. Initialise the database on first mount ─────────────────────────────
   // initDb() is idempotent — safe to call every launch.
@@ -1030,13 +1051,15 @@ export default function App() {
     <div className="h-full flex bg-base text-text">
       <Sidebar active={active} setActive={setActive} />
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <TopBar now={now} active={active} onQuickNote={() => setQuickNoteOpen(true)} />
+        <TopBar now={now} active={active} onQuickNote={() => setQuickNoteOpen(true)}
+          onBreak={toggleBreak} onBreakActive={onBreak} />
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {active === "daily" && (
             <DailyLog
               projects={projects}
               onSessionSaved={(s) => setExternalSession(s)}
               externalSession={externalSession}
+              breakActive={onBreak}
             />
           )}
           {active === "hangar"    && <ProjectHangar projects={projects} setProjects={setProjects} />}
