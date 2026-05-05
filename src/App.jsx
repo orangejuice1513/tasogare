@@ -72,14 +72,15 @@ function Sidebar({ active, setActive }) {
     <aside className="w-[220px] shrink-0 border-r border-border/70 bg-base flex flex-col">
       <div className="px-5 pt-6 pb-7">
         <div className="flex items-center gap-2.5">
-          <div className="relative w-6 h-6">
-            <div className="absolute inset-0 rounded-[3px] border border-rose/70" />
-            <div className="absolute inset-[3px] rounded-[1.5px] bg-rose/20 stripes" />
-          </div>
+          <img
+            src="/icon.png"
+            alt="tasogare"
+            className="w-8 h-8 rounded-[6px] shrink-0"
+          />
           <div className="leading-tight">
             {/* ↙ APP TITLE — edit here */}
-            <div className="text-[12.5px] font-medium text-text tracking-tight">Mission Control</div>
-            <div className="label">manager</div>
+            <div className="text-[12.5px] font-medium text-text tracking-tight">tasogare</div>
+            <div className="label">mission control</div>
           </div>
         </div>
       </div>
