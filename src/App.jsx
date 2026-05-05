@@ -1253,7 +1253,9 @@ export default function App() {
         <TopBar now={now} active={active} onQuickNote={() => setQuickNoteOpen(true)}
           onBreak={toggleBreak} onBreakActive={onBreak} />
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          {active === "daily" && (
+          {/* DailyLog is always mounted so the timer keeps running when switching tabs.
+              Other tabs are hidden/shown with display:none via the hidden class. */}
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${active === "daily" ? "" : "hidden"}`}>
             <DailyLog
               projects={projects}
               onSessionSaved={s => setExternalSession(s)}
@@ -1264,16 +1266,20 @@ export default function App() {
               onTaskUncomplete={handleTaskUncomplete}
               onTaskRequestDelete={setDeleteTarget}
             />
-          )}
-          {active === "hangar"    && <ProjectHangar projects={projects} setProjects={setProjects} />}
-          {active === "interview" && <InterviewDeck projects={projects} />}
-          {active === "tasks"     && (
+          </div>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${active === "hangar" ? "" : "hidden"}`}>
+            <ProjectHangar projects={projects} setProjects={setProjects} />
+          </div>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${active === "interview" ? "" : "hidden"}`}>
+            <InterviewDeck projects={projects} />
+          </div>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${active === "tasks" ? "" : "hidden"}`}>
             <TasksTab
               tasks={tasks}
               setTasks={setTasks}
               projects={projects}
             />
-          )}
+          </div>
         </div>
       </main>
 
