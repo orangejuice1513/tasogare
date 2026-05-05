@@ -1,26 +1,15 @@
 /**
  * db.js — Mission Control database layer
- *
- * Replaces the old fetch()-based API object with direct SQLite queries
- * via @tauri-apps/plugin-sql.  Drop this file into src/ alongside App.jsx.
- *
- * The plugin opens a single SQLite file at:
- *   macOS  → ~/Library/Application Support/<bundle-id>/whitespace.db
- *   Linux  → ~/.local/share/<bundle-id>/whitespace.db
- *   Windows → %APPDATA%\<bundle-id>\whitespace.db
+ * Place in: tasogare/src/db.js
  */
 
 import Database from "@tauri-apps/plugin-sql";
 
-// ── Connection singleton ──────────────────────────────────────────────────────
-// load() is cheap after the first call — the plugin caches the connection.
 async function getDb() {
   return await Database.load("sqlite:whitespace.db");
 }
 
-// ── Schema bootstrap ─────────────────────────────────────────────────────────
-// Called once from App on mount.  Every statement is idempotent (IF NOT EXISTS)
-// so running it on every launch is completely safe.
+// ── Schema bootstrap ──────────────────────────────────────────────────────────
 export async function initDb() {
   const db = await getDb();
   await db.execute(`PRAGMA foreign_keys = ON`);
@@ -45,45 +34,41 @@ export async function initDb() {
       timestamp        TEXT    NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      text          TEXT    NOT NULL,
+      project_id    INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+      done          INTEGER NOT NULL DEFAULT 0,
+      done_at       TEXT,
+      deleted       INTEGER NOT NULL DEFAULT 0,
+      delete_reason TEXT,
+      deleted_at    TEXT,
+      created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
 export async function getProjects() {
   const db = await getDb();
-  return await db.select(
-    "SELECT * FROM projects ORDER BY created_at DESC"
-  );
+  return await db.select("SELECT * FROM projects ORDER BY created_at DESC");
 }
 
-/**
- * @param {{ name: string, short_description?: string, long_description?: string }} body
- * @returns {Promise<object>} the newly-created project row
- */
-export async function createProject(body) {
-  const { name, short_description = "", long_description = "" } = body;
+export async function createProject({ name, short_description = "", long_description = "" }) {
   if (!name.trim()) throw new Error("name is required");
-
   const db = await getDb();
   const result = await db.execute(
-    `INSERT INTO projects (name, short_description, long_description)
-     VALUES ($1, $2, $3)`,
+    "INSERT INTO projects (name, short_description, long_description) VALUES ($1, $2, $3)",
     [name.trim(), short_description, long_description]
   );
-
-  // Fetch the newly-inserted row by its lastInsertId
-  const rows = await db.select(
-    "SELECT * FROM projects WHERE id = $1",
-    [result.lastInsertId]
-  );
+  const rows = await db.select("SELECT * FROM projects WHERE id = $1", [result.lastInsertId]);
   return rows[0];
 }
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
-/**
- * @param {number|null} projectId  — pass null to fetch all sessions
- */
 export async function getSessions(projectId = null) {
   const db = await getDb();
   if (projectId != null) {
@@ -92,61 +77,77 @@ export async function getSessions(projectId = null) {
       [projectId]
     );
   }
-  return await db.select(
-    "SELECT * FROM sessions ORDER BY timestamp DESC"
-  );
+  return await db.select("SELECT * FROM sessions ORDER BY timestamp DESC");
 }
 
-/**
- * @param {{
- *   type: 'Routine'|'Engineering',
- *   project_id?: number|null,
- *   intent?: string,
- *   reality?: string,
- *   notes?: string,
- *   duration_seconds?: number
- * }} body
- * @returns {Promise<object>} the newly-created session row
- */
-export async function createSession(body) {
-  const {
-    type,
-    project_id = null,
-    intent = "",
-    reality = "",
-    notes = "",
-    duration_seconds = 0,
-  } = body;
-
+export async function createSession({
+  type, project_id = null, intent = "", reality = "", notes = "", duration_seconds = 0,
+}) {
   if (type !== "Routine" && type !== "Engineering") {
     throw new Error("type must be 'Routine' or 'Engineering'");
   }
-
   const db = await getDb();
   const result = await db.execute(
-    `INSERT INTO sessions
-       (type, project_id, intent, reality, notes, duration_seconds)
+    `INSERT INTO sessions (type, project_id, intent, reality, notes, duration_seconds)
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [type, project_id, intent, reality, notes, duration_seconds]
   );
-
-  const rows = await db.select(
-    "SELECT * FROM sessions WHERE id = $1",
-    [result.lastInsertId]
-  );
+  const rows = await db.select("SELECT * FROM sessions WHERE id = $1", [result.lastInsertId]);
   return rows[0];
 }
 
-/**
- * @param {number} id
- */
 export async function deleteSession(id) {
   const db = await getDb();
+  const result = await db.execute("DELETE FROM sessions WHERE id = $1", [id]);
+  if (result.rowsAffected === 0) throw new Error(`session ${id} not found`);
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+export async function getTasks() {
+  const db = await getDb();
+  return await db.select(
+    "SELECT * FROM tasks WHERE deleted = 0 ORDER BY done ASC, created_at ASC"
+  );
+}
+
+export async function createTask({ text, project_id = null }) {
+  if (!text.trim()) throw new Error("task text is required");
+  const db = await getDb();
   const result = await db.execute(
-    "DELETE FROM sessions WHERE id = $1",
+    "INSERT INTO tasks (text, project_id) VALUES ($1, $2)",
+    [text.trim(), project_id]
+  );
+  const rows = await db.select("SELECT * FROM tasks WHERE id = $1", [result.lastInsertId]);
+  return rows[0];
+}
+
+export async function completeTask(id) {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE tasks SET done = 1, done_at = datetime('now') WHERE id = $1",
     [id]
   );
-  if (result.rowsAffected === 0) {
-    throw new Error(`session ${id} not found`);
-  }
+  const rows = await db.select("SELECT * FROM tasks WHERE id = $1", [id]);
+  return rows[0];
+}
+
+export async function uncompleteTask(id) {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE tasks SET done = 0, done_at = NULL WHERE id = $1",
+    [id]
+  );
+  const rows = await db.select("SELECT * FROM tasks WHERE id = $1", [id]);
+  return rows[0];
+}
+
+// Soft-delete — stores the mandatory reason so nothing is silently lost
+export async function deleteTask(id, reason) {
+  if (!reason || !reason.trim()) throw new Error("a reason is required to delete a task");
+  const db = await getDb();
+  await db.execute(
+    "UPDATE tasks SET deleted = 1, delete_reason = $1, deleted_at = datetime('now') WHERE id = $2",
+    [reason.trim(), id]
+  );
 }

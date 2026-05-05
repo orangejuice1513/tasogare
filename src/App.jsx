@@ -1,40 +1,35 @@
 /**
- * App.jsx — Mission Control (Tauri v2 edition)
- *
- * Drop into src/ alongside db.js.
- * All fetch() calls have been replaced with direct SQLite queries
- * via the functions exported from db.js.
- *
- * Nothing else has changed: UI, layout, logic, Rosé Pine Moon
- * styling, keyboard shortcuts, modals — all identical.
+ * App.jsx — Mission Control (Tauri v2)
+ * Place in: tasogare/src/App.jsx
  */
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
-  initDb,
-  getProjects,
-  createProject,
-  getSessions,
-  createSession,
-  deleteSession,
+  initDb, getProjects, createProject,
+  getSessions, createSession, deleteSession,
+  getTasks, createTask, completeTask, uncompleteTask, deleteTask,
 } from "./db";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function pad(n) { return n.toString().padStart(2, "0"); }
 function fmtTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function fmtDur(s) {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60), sec = s % 60;
   if (m < 60) return `${m}m ${pad(sec)}s`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${pad(m % 60)}m`;
+  return `${Math.floor(m / 60)}h ${pad(m % 60)}m`;
 }
 function fmtHours(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h ${pad(m)}m` : `${m}m`;
 }
+function fmtDate(str) {
+  if (!str) return "—";
+  const d = new Date(str);
+  return isNaN(d) ? "—" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
-// ─── Icons ──────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -45,6 +40,7 @@ const I = {
   clock:    <Icon d={<><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>} />,
   hangar:   <Icon d={<><rect x="2" y="7" width="20" height="13" rx="1"/><path d="M2 10h20M8 7V4M16 7V4"/></>} />,
   deck:     <Icon d={<><path d="M4 4h16v4H4zM4 12h10v4H4zM4 20h7"/></>} />,
+  tasks:    <Icon d={<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>} />,
   flag:     <Icon d={<><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></>} />,
   note:     <Icon d={<><path d="M5 4h11l3 3v13H5z"/><path d="M9 9h7M9 13h7M9 17h4"/></>} />,
   play:     <Icon d={<><path d="M7 5l12 7-12 7V5z"/></>} />,
@@ -52,33 +48,28 @@ const I = {
   stop:     <Icon d={<><rect x="6" y="6" width="12" height="12" rx="1"/></>} />,
   check:    <Icon d={<><path d="M4 12l5 5L20 6"/></>} />,
   plus:     <Icon d={<><path d="M12 5v14M5 12h14"/></>} />,
-  sort:     <Icon d={<><path d="M4 6h16M4 12h10M4 18h6"/></>} />,
   expand:   <Icon d={<><path d="M6 9l6 6 6-6"/></>} />,
   collapse: <Icon d={<><path d="M18 15l-6-6-6 6"/></>} />,
-  gear:     <Icon d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></>} />,
   trash:    <Icon d={<><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></>} />,
+  undo:     <Icon d={<><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.83-6.36L3 13"/></>} />,
 };
 
-// ─── NAV definition ──────────────────────────────────────────────────────────
+// ─── NAV ─────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "daily",     label: "daily log",      icon: I.clock,  accent: "#BAADF4" },
-  { id: "hangar",    label: "projects",        icon: I.hangar, accent: "#26E0A6" },
-  { id: "interview", label: "interview deck",  icon: I.deck,   accent: "#F5A9BB" },
+  { id: "daily",     label: "daily log",     icon: I.clock,  accent: "#BAADF4" },
+  { id: "hangar",    label: "projects",       icon: I.hangar, accent: "#26E0A6" },
+  { id: "interview", label: "interview deck", icon: I.deck,   accent: "#F5A9BB" },
+  { id: "tasks",     label: "tasks",          icon: I.tasks,  accent: "#E0C189" },
 ];
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
-function Sidebar({ active, setActive }) {
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar({ active, setActive, pendingCount }) {
   return (
     <aside className="w-[220px] shrink-0 border-r border-border/70 bg-base flex flex-col">
       <div className="px-5 pt-6 pb-7">
         <div className="flex items-center gap-2.5">
-          <img
-            src="/icon.png"
-            alt="tasogare"
-            className="w-8 h-8 rounded-[6px] shrink-0"
-          />
+          <img src="/icon.png" alt="tasogare" className="w-8 h-8 rounded-[6px] shrink-0" />
           <div className="leading-tight">
-            {/* ↙ APP TITLE — edit here */}
             <div className="text-[12.5px] font-medium text-text tracking-tight">tasogare</div>
             <div className="label">mission control</div>
           </div>
@@ -93,14 +84,21 @@ function Sidebar({ active, setActive }) {
               className={`group relative flex items-center gap-3 pl-4 pr-3 py-2 rounded-[6px] text-left transition-colors ${isActive ? "bg-surface" : "hover:bg-surface/50"}`}>
               {isActive && <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-r" style={{ background: item.accent }} />}
               <span className="shrink-0" style={{ color: isActive ? item.accent : "#7E8294" }}>{item.icon}</span>
-              <span className={`text-[13px] tracking-tight ${isActive ? "text-text" : "text-sub group-hover:text-text"}`}>{item.label}</span>
+              <span className={`flex-1 text-[13px] tracking-tight ${isActive ? "text-text" : "text-sub group-hover:text-text"}`}>{item.label}</span>
+              {/* Pending task badge */}
+              {item.id === "tasks" && pendingCount > 0 && (
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: "#E0C18922", color: "#E0C189" }}>
+                  {pendingCount}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
       <div className="mt-auto px-5 pb-5 pt-6 border-t border-border/50 mx-3">
         <div className="label mb-1.5">keyboard</div>
-        {[["⌥ 1","daily log"],["⌥ 2","projects"],["⌥ 3","interview deck"]].map(([k,v]) => (
+        {[["⌥ 1","daily log"],["⌥ 2","projects"],["⌥ 3","interview deck"],["⌥ 4","tasks"]].map(([k,v]) => (
           <div key={k} className="flex items-center justify-between mt-1">
             <span className="label">{v}</span>
             <span className="font-mono text-[10px] text-dim bg-overlay px-1.5 py-0.5 rounded">{k}</span>
@@ -111,7 +109,7 @@ function Sidebar({ active, setActive }) {
   );
 }
 
-// ─── TopBar ──────────────────────────────────────────────────────────────────
+// ─── TopBar ───────────────────────────────────────────────────────────────────
 function TopBar({ now, active, onQuickNote, onBreak, onBreakActive }) {
   const dateStr = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
   const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -129,14 +127,12 @@ function TopBar({ now, active, onQuickNote, onBreak, onBreakActive }) {
         <span className="font-mono tnum text-text">{timeStr}</span>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <button
-          onClick={onQuickNote}
+        <button onClick={onQuickNote}
           className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] text-sub hover:text-text hover:border-border/80 flex items-center gap-2 transition-colors">
           {I.note}<span>quick note</span>
           <span className="font-mono text-[10px] text-dim ml-0.5">⌘⇧N</span>
         </button>
-        <button
-          onClick={onBreak}
+        <button onClick={onBreak}
           className="px-3 py-1.5 rounded-[6px] border text-[12px] flex items-center gap-2 transition-colors"
           style={onBreakActive
             ? { borderColor: "#F5A9BB", color: "#F5A9BB", background: "#F5A9BB18" }
@@ -149,14 +145,12 @@ function TopBar({ now, active, onQuickNote, onBreak, onBreakActive }) {
   );
 }
 
-// ─── Timer ring ──────────────────────────────────────────────────────────────
+// ─── Timer ring ───────────────────────────────────────────────────────────────
 function TimerRing({ seconds, running, onBreak }) {
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
   const target = 90 * 60, progress = Math.min(seconds / target, 1), C = 2 * Math.PI * 78;
-
-  const statusDot = onBreak ? "bg-rose animate-pulse" : running ? "bg-teal animate-pulse" : "bg-yellow";
+  const statusDot  = onBreak ? "bg-rose animate-pulse" : running ? "bg-teal animate-pulse" : "bg-yellow";
   const statusLabel = onBreak ? "on break" : running ? "running" : "paused";
-
   return (
     <div className="rounded-[10px] border border-border bg-surface p-5">
       <div className="flex items-center justify-between mb-4">
@@ -199,26 +193,6 @@ function TimerRing({ seconds, running, onBreak }) {
   );
 }
 
-// ─── TYPE chip ───────────────────────────────────────────────────────────────
-const TYPE_META = {
-  intent:  { color: "#BAADF4", label: "intent" },
-  reality: { color: "#26E0A6", label: "reality" },
-  break:   { color: "#F5A9BB", label: "break" },
-  note:    { color: "#9CD9F0", label: "note" },
-  context: { color: "#E0C189", label: "context" },
-  blocker: { color: "#F6A487", label: "blocker" },
-};
-function TypeChip({ type }) {
-  const meta = TYPE_META[type] || TYPE_META.note;
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-[3px] rounded-[4px] font-mono text-[10.5px] tracking-wider"
-      style={{ color: meta.color, border: `1px solid ${meta.color}33` }}>
-      <span className="w-1 h-1 rounded-full" style={{ background: meta.color }} />
-      {meta.label}
-    </span>
-  );
-}
-
 // ─── Quick Note Modal ─────────────────────────────────────────────────────────
 function QuickNoteModal({ onClose, onSaved }) {
   const [text, setText]     = useState("");
@@ -237,27 +211,16 @@ function QuickNoteModal({ onClose, onSaved }) {
     if (!text.trim()) { setErr("note cannot be empty"); return; }
     setSaving(true); setErr(null);
     try {
-      // ── was: API.postSession(...)
-      const saved = await createSession({
-        type: "Routine",
-        intent: "Quick Note",
-        notes: text.trim(),
-        duration_seconds: 0,
-      });
-      onSaved(saved);
-      onClose();
-    } catch (e) {
-      setErr(e.message);
-      setSaving(false);
-    }
+      const saved = await createSession({ type: "Routine", intent: "Quick Note", notes: text.trim(), duration_seconds: 0 });
+      onSaved(saved); onClose();
+    } catch (e) { setErr(e.message); setSaving(false); }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "rgba(24,28,43,0.82)", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-[520px] mx-4 rounded-[12px] border border-border bg-surface shadow-2xl flex flex-col"
+      <div className="w-full max-w-[520px] mx-4 rounded-[12px] border border-border bg-surface flex flex-col"
         style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.55)" }}>
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
           <div className="flex items-center gap-2.5">
@@ -270,25 +233,18 @@ function QuickNoteModal({ onClose, onSaved }) {
           </div>
         </div>
         <div className="px-5 py-4">
-          <div className="label mb-2">note — will be saved as a Routine session</div>
-          <textarea
-            ref={taRef}
-            value={text}
-            onChange={e => setText(e.target.value)}
+          <div className="label mb-2">note — saved as a Routine session</div>
+          <textarea ref={taRef} value={text} onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); }}
-            placeholder={"jot anything — a decision, a blocker, a loose thought\n\ne.g. decided to defer the cache layer to Q4\nbug: token refresh fails on safari 17"}
+            placeholder={"jot anything — a decision, a blocker, a loose thought"}
             rows={7}
-            className="w-full bg-overlay border border-border rounded-[8px] px-4 py-3 text-[13px] text-text font-mono leading-relaxed outline-none focus:border-blue/60 resize-none transition-colors"
-          />
+            className="w-full bg-overlay border border-border rounded-[8px] px-4 py-3 text-[13px] text-text font-mono leading-relaxed outline-none focus:border-blue/60 resize-none transition-colors" />
           {err && <div className="mt-1.5 font-mono text-[11px] text-orange">{err}</div>}
         </div>
         <div className="px-5 pb-5 flex items-center justify-between">
           <span className="font-mono text-[10px] text-dim">⌘↵ to save</span>
           <div className="flex gap-2">
-            <button onClick={onClose}
-              className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] text-sub font-mono hover:text-text transition-colors">
-              cancel
-            </button>
+            <button onClick={onClose} className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] text-sub font-mono hover:text-text transition-colors">cancel</button>
             <button onClick={save} disabled={saving || !text.trim()}
               className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] border border-blue/50 text-blue text-[12px] font-mono hover:border-blue disabled:opacity-40 transition-colors">
               {I.check}{saving ? "saving…" : "save note"}
@@ -300,36 +256,188 @@ function QuickNoteModal({ onClose, onSaved }) {
   );
 }
 
-// ─── Delete button (shared) ───────────────────────────────────────────────────
+// ─── Delete session button ────────────────────────────────────────────────────
 function DeleteBtn({ onDelete }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy]             = useState(false);
-
   const handleClick = async (e) => {
     e.stopPropagation();
     if (!confirming) { setConfirming(true); return; }
-    setBusy(true);
-    await onDelete();
-    setBusy(false);
+    setBusy(true); await onDelete(); setBusy(false);
   };
-
   useEffect(() => {
     if (!confirming) return;
     const id = setTimeout(() => setConfirming(false), 2500);
     return () => clearTimeout(id);
   }, [confirming]);
-
   return (
-    <button
-      onClick={handleClick}
-      disabled={busy}
-      title={confirming ? "click again to confirm delete" : "delete session"}
+    <button onClick={handleClick} disabled={busy}
       className="flex items-center gap-1 px-1.5 py-1 rounded-[5px] font-mono text-[10px] transition-all disabled:opacity-40 opacity-0 group-hover:opacity-100"
       style={confirming
         ? { color: "#F5A9BB", border: "1px solid #F5A9BB55", background: "#F5A9BB11" }
         : { color: "#7E8294", border: "1px solid transparent" }}>
       {busy ? "…" : confirming ? <>! confirm</> : I.trash}
     </button>
+  );
+}
+
+// ─── Delete Task Modal (requires a written reason) ────────────────────────────
+function DeleteTaskModal({ task, onClose, onDeleted }) {
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState(null);
+  const inputRef            = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const submit = async () => {
+    if (!reason.trim()) { setErr("you must write a reason before deleting"); return; }
+    setSaving(true); setErr(null);
+    try {
+      await deleteTask(task.id, reason.trim());
+      onDeleted(task.id);
+      onClose();
+    } catch (e) { setErr(e.message); setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(24,28,43,0.88)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-[480px] mx-4 rounded-[12px] border border-rose/30 bg-surface flex flex-col"
+        style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
+          <div className="flex items-center gap-2.5">
+            <span style={{ color: "#F5A9BB" }}>{I.trash}</span>
+            <span className="text-[13px] text-text font-medium tracking-tight">delete task</span>
+          </div>
+          <button onClick={onClose} className="text-dim hover:text-sub transition-colors text-[16px]">✕</button>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {/* Show the task being deleted */}
+          <div className="bg-overlay rounded-[6px] px-3 py-2.5 border border-border/50">
+            <div className="font-mono text-[10px] text-dim mb-1">task to delete</div>
+            <div className="text-[13px] text-sub line-through">{task.text}</div>
+          </div>
+          {/* Mandatory reason */}
+          <div>
+            <div className="label mb-1.5">
+              why are you deleting this?
+              <span className="text-rose ml-1">*</span>
+              <span className="text-dim ml-2">(required — no reason, no delete)</span>
+            </div>
+            <textarea ref={inputRef} value={reason} onChange={e => setReason(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }}
+              placeholder={"e.g. no longer relevant after the meeting\ne.g. decided to defer this to next sprint\ne.g. actually a duplicate of another task"}
+              rows={4}
+              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2.5 text-[12.5px] text-text font-mono leading-relaxed outline-none focus:border-rose/60 resize-none transition-colors" />
+            {err && <div className="mt-1 font-mono text-[11px] text-orange">{err}</div>}
+          </div>
+        </div>
+        <div className="px-5 pb-5 flex items-center justify-between">
+          <span className="font-mono text-[10px] text-dim">⌘↵ to confirm</span>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] text-sub font-mono hover:text-text transition-colors">cancel</button>
+            <button onClick={submit} disabled={saving || !reason.trim()}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] border border-rose/50 text-rose text-[12px] font-mono hover:border-rose disabled:opacity-40 transition-colors">
+              {I.trash}{saving ? "deleting…" : "delete task"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mini task list (shown above intent in Daily Log) ─────────────────────────
+function MiniTaskList({ tasks, projects, onComplete, onUncomplete, onRequestDelete }) {
+  const pending   = tasks.filter(t => !t.done);
+  const completed = tasks.filter(t => t.done);
+  const [showDone, setShowDone] = useState(false);
+
+  if (tasks.length === 0) return null;
+
+  return (
+    <div className="px-7 pt-5 pb-1">
+      <div className="rounded-[10px] border border-border/60 bg-surface overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
+          <div className="flex items-center gap-2">
+            <span style={{ color: "#E0C189" }}>{I.tasks}</span>
+            <span className="label label-up">backlog</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
+              style={{ background: "#E0C18922", color: "#E0C189" }}>
+              {pending.length} pending
+            </span>
+          </div>
+          {completed.length > 0 && (
+            <button onClick={() => setShowDone(s => !s)}
+              className="font-mono text-[10px] text-dim hover:text-sub transition-colors flex items-center gap-1">
+              {showDone ? I.collapse : I.expand}
+              {showDone ? "hide" : `${completed.length} done`}
+            </button>
+          )}
+        </div>
+
+        {/* Pending tasks */}
+        {pending.length === 0 ? (
+          <div className="px-4 py-3 label">all tasks complete ✓</div>
+        ) : (
+          <div className="divide-y divide-border/30 max-h-[200px] overflow-y-auto">
+            {pending.map(task => {
+              const proj = projects.find(p => p.id === task.project_id);
+              return (
+                <div key={task.id} className="group flex items-start gap-3 px-4 py-2.5 hover:bg-overlay/40 transition-colors">
+                  {/* Checkbox */}
+                  <button onClick={() => onComplete(task.id)}
+                    className="mt-0.5 w-4 h-4 shrink-0 rounded border border-border hover:border-yellow transition-colors flex items-center justify-center">
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] text-text">{task.text}</div>
+                    {proj && <div className="font-mono text-[10px] text-teal">↳ {proj.name}</div>}
+                  </div>
+                  <button onClick={() => onRequestDelete(task)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-dim hover:text-rose"
+                    title="delete task">
+                    {I.trash}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Completed tasks — collapsed by default */}
+        {showDone && completed.length > 0 && (
+          <div className="border-t border-border/40 divide-y divide-border/20 max-h-[160px] overflow-y-auto bg-overlay/20">
+            {completed.map(task => (
+              <div key={task.id} className="group flex items-start gap-3 px-4 py-2.5">
+                <button onClick={() => onUncomplete(task.id)}
+                  className="mt-0.5 w-4 h-4 shrink-0 rounded border border-teal/50 bg-teal/10 flex items-center justify-center"
+                  title="mark incomplete">
+                  <span style={{ color: "#26E0A6", transform: "scale(0.7)" }}>{I.check}</span>
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] text-dim line-through">{task.text}</div>
+                  {task.done_at && (
+                    <div className="font-mono text-[10px] text-dim">done {fmtDate(task.done_at)}</div>
+                  )}
+                </div>
+                <button onClick={() => onRequestDelete(task)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-dim hover:text-rose"
+                  title="delete task">
+                  {I.trash}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -344,7 +452,7 @@ const HINTS = [
   "reproduce the duplicate-event bug locally",
 ];
 
-function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
+function DailyLog({ projects, onSessionSaved, externalSession, breakActive, tasks, onTaskComplete, onTaskUncomplete, onTaskRequestDelete }) {
   const [phase, setPhase]             = useState("idle");
   const [sessionType, setSessionType] = useState("Routine");
   const [projectId, setProjectId]     = useState(null);
@@ -358,91 +466,72 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
   const [saving, setSaving]           = useState(false);
   const [err, setErr]                 = useState(null);
 
-  // Pause/resume timer whenever the global break toggle changes.
-  // Only affects an active session — does nothing while idle or logging.
-  useEffect(() => {
-    if (phase !== "running") return;
-    setRunning(!breakActive);
-  }, [breakActive]);
-
-  // Absorb sessions saved externally (e.g. quick note modal)
   useEffect(() => {
     if (externalSession)
       setSessions(arr => [externalSession, ...arr.filter(s => s.id !== externalSession.id)]);
   }, [externalSession]);
 
-  // Rotate placeholder hints
   useEffect(() => {
     const id = setInterval(() => setHint(h => (h + 1) % HINTS.length), 4500);
     return () => clearInterval(id);
   }, []);
 
-  // Timer tick
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => setSeconds(s => s + 1), 1000);
     return () => clearInterval(id);
   }, [running]);
 
+  useEffect(() => {
+    if (phase !== "running") return;
+    setRunning(!breakActive);
+  }, [breakActive]);
+
   const startSession = () => {
     if (!intent.trim()) return;
-    setPhase("running");
-    setSeconds(0);
-    setRunning(true);
-    setReality("");
-    setDebriefNotes("");
-    setErr(null);
+    setPhase("running"); setSeconds(0); setRunning(true);
+    setReality(""); setDebriefNotes(""); setErr(null);
   };
 
-  const stopSession = () => {
-    setRunning(false);
-    setPhase("logging");
-  };
+  const stopSession  = () => { setRunning(false); setPhase("logging"); };
 
   const logSession = async () => {
-    setSaving(true);
-    setErr(null);
+    setSaving(true); setErr(null);
     try {
-      // ── was: API.postSession(...)
       const saved = await createSession({
         type: sessionType,
         project_id: sessionType === "Engineering" ? projectId : null,
-        intent: intent.trim(),
-        reality: reality.trim(),
-        notes: debriefNotes.trim(),
-        duration_seconds: seconds,
+        intent: intent.trim(), reality: reality.trim(),
+        notes: debriefNotes.trim(), duration_seconds: seconds,
       });
       setSessions(arr => [saved, ...arr]);
       onSessionSaved && onSessionSaved(saved);
-      setIntent("");
-      setReality("");
-      setDebriefNotes("");
-      setSeconds(0);
-      setPhase("idle");
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setSaving(false);
-    }
+      setIntent(""); setReality(""); setDebriefNotes(""); setSeconds(0); setPhase("idle");
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
   };
 
   const discardSession = () => {
-    setSeconds(0);
-    setRunning(false);
-    setPhase("idle");
-    setReality("");
-    setDebriefNotes("");
+    setSeconds(0); setRunning(false); setPhase("idle"); setReality(""); setDebriefNotes("");
   };
 
   const selectedProject = projects.find(p => p.id === projectId);
 
   return (
     <div className="flex flex-1 min-h-0">
-      {/* ── Main column ── */}
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
 
-        {/* Intent + session type strip */}
-        <section className="px-7 pt-7 pb-5">
+        {/* ── Mini task list above intent ── */}
+        <MiniTaskList
+          tasks={tasks}
+          projects={projects}
+          onComplete={onTaskComplete}
+          onUncomplete={onTaskUncomplete}
+          onRequestDelete={onTaskRequestDelete}
+        />
+
+        {/* ── Intent section ── */}
+        <section className="px-7 pt-5 pb-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <span className="label label-up">intent</span>
@@ -462,11 +551,9 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
             </div>
           </div>
 
-          {/* Project dropdown — Engineering only */}
           {sessionType === "Engineering" && (
             <div className="mb-3">
-              <select
-                value={projectId ?? ""}
+              <select value={projectId ?? ""}
                 onChange={e => setProjectId(e.target.value ? Number(e.target.value) : null)}
                 disabled={phase === "running" || phase === "logging"}
                 className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono disabled:opacity-50 outline-none focus:border-teal/70"
@@ -475,26 +562,20 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               {selectedProject && (
-                <div className="mt-1 font-mono text-[10.5px] text-sub">
-                  ↳ {selectedProject.short_description || "no short description"}
-                </div>
+                <div className="mt-1 font-mono text-[10.5px] text-sub">↳ {selectedProject.short_description || "no short description"}</div>
               )}
             </div>
           )}
 
-          {/* Intent input */}
           <div className="relative rounded-[10px] border border-border bg-surface focus-within:border-blue/70 transition-colors">
             <div className="flex items-center pl-5 pr-3 py-4 gap-4">
               <span className="text-blue text-[15px] font-mono leading-none mt-0.5">›</span>
-              <input
-                value={intent}
-                onChange={e => setIntent(e.target.value)}
+              <input value={intent} onChange={e => setIntent(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && phase === "idle" && startSession()}
                 placeholder={HINTS[hint]}
                 disabled={phase === "running" || phase === "logging"}
                 className="flex-1 bg-transparent outline-none text-[19px] tracking-tight text-text font-light placeholder:text-dim disabled:opacity-60"
-                style={{ fontFamily: "Fraunces, ui-serif, serif" }}
-              />
+                style={{ fontFamily: "Fraunces, ui-serif, serif" }} />
               {phase === "idle" && (
                 <button onClick={startSession} disabled={!intent.trim()}
                   className="px-3 py-1.5 rounded-[6px] border text-[12px] flex items-center gap-2 disabled:opacity-40 transition-colors"
@@ -515,7 +596,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
           </div>
         </section>
 
-        {/* Running / logging controls */}
+        {/* ── Running / logging controls ── */}
         {(phase === "running" || phase === "logging") && (
           <section className="px-7 pb-5">
             <div className="rounded-[10px] border bg-surface p-5 space-y-4"
@@ -526,11 +607,8 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
                   <div className="text-[14px] text-text" style={{ fontFamily: "Fraunces, serif" }}>{intent}</div>
                   {selectedProject && <div className="font-mono text-[10.5px] text-teal mt-0.5">↳ {selectedProject.name}</div>}
                 </div>
-                <div className="font-mono text-[28px] text-text tnum" style={{ fontFamily: "Geist Mono, monospace" }}>
-                  {fmtDur(seconds)}
-                </div>
+                <div className="font-mono text-[28px] text-text tnum" style={{ fontFamily: "Geist Mono, monospace" }}>{fmtDur(seconds)}</div>
               </div>
-
               {phase === "running" && (
                 <div className="flex gap-2">
                   <button onClick={() => setRunning(r => !r)}
@@ -544,7 +622,6 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
                   </button>
                 </div>
               )}
-
               {phase === "logging" && (
                 <div className="space-y-3">
                   <div>
@@ -555,14 +632,11 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
                       style={{ fontFamily: "Fraunces, serif" }} />
                   </div>
                   <div>
-                    <div className="label mb-1.5">debrief notes / bug log <span className="text-dim">(optional · multiline)</span></div>
-                    <textarea
-                      value={debriefNotes}
-                      onChange={e => setDebriefNotes(e.target.value)}
-                      placeholder={"- p95 latency spiked during deploy\n- reproduced locally with sqlite WAL mode\n- next: open issue + tag @ravi"}
+                    <div className="label mb-1.5">debrief notes / bug log <span className="text-dim">(optional)</span></div>
+                    <textarea value={debriefNotes} onChange={e => setDebriefNotes(e.target.value)}
+                      placeholder={"- p95 latency spiked during deploy\n- next: open issue + tag @ravi"}
                       rows={4}
-                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed"
-                    />
+                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed" />
                   </div>
                   {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
                   <div className="flex gap-2">
@@ -581,7 +655,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
           </section>
         )}
 
-        {/* Session log */}
+        {/* ── Session log ── */}
         <section className="flex-1 min-h-0 flex flex-col">
           <div className="px-7 py-2 flex items-center justify-between border-y border-border/70 bg-surface/40">
             <span className="label label-up">session log</span>
@@ -589,29 +663,23 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive }) {
           </div>
           <div className="flex-1 overflow-y-auto">
             {sessions.length === 0 ? (
-              <div className="px-7 py-10 text-center">
-                <div className="label">no sessions logged yet · commit an intent to start</div>
-              </div>
+              <div className="px-7 py-10 text-center"><div className="label">no sessions yet · commit an intent to start</div></div>
             ) : (
               sessions.map((s) => (
                 <SessionRow key={s.id} session={s} projects={projects}
-                  onDelete={async () => {
-                    // ── was: API.deleteSession(s.id)
-                    await deleteSession(s.id);
-                    setSessions(arr => arr.filter(x => x.id !== s.id));
-                  }} />
+                  onDelete={async () => { await deleteSession(s.id); setSessions(arr => arr.filter(x => x.id !== s.id)); }} />
               ))
             )}
             <div className="px-7 py-5 border-t border-border/40 flex items-center gap-3">
               <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-              <span className="label">in progress · captured live</span>
+              <span className="label">captured live</span>
               <span className="ml-auto label">end of log</span>
             </div>
           </div>
         </section>
       </div>
 
-      {/* Timer ring sidebar */}
+      {/* ── Timer ring sidebar ── */}
       <aside className="w-[300px] shrink-0 border-l border-border/70 bg-base/60 p-4 overflow-y-auto">
         <TimerRing seconds={seconds} running={running} onBreak={breakActive} />
         <div className="mt-4 rounded-[10px] border border-border bg-surface p-4">
@@ -655,15 +723,12 @@ function SessionRow({ session, projects, onDelete }) {
             <span className="ml-auto font-mono text-[11px] text-sub tnum">{fmtDur(session.duration_seconds)}</span>
           </div>
           <div className="text-[13px] text-text" style={{ fontFamily: "Fraunces, serif" }}>{session.intent}</div>
-          {session.reality && (
-            <div className="mt-1 text-[12px] text-sub">↳ {session.reality}</div>
-          )}
+          {session.reality && <div className="mt-1 text-[12px] text-sub">↳ {session.reality}</div>}
           {session.notes && (
             <div className="mt-2">
               <button onClick={() => setExpanded(e => !e)}
                 className="flex items-center gap-1.5 font-mono text-[10.5px] text-dim hover:text-sub transition-colors">
-                {expanded ? I.collapse : I.expand}
-                {expanded ? "collapse notes" : "expand notes"}
+                {expanded ? I.collapse : I.expand}{expanded ? "collapse notes" : "expand notes"}
               </button>
               {expanded && (
                 <pre className="mt-2 text-[11.5px] text-sub font-mono leading-relaxed bg-overlay rounded-[6px] px-3 py-2.5 whitespace-pre-wrap border border-border/50">
@@ -692,34 +757,23 @@ function ProjectHangar({ projects, setProjects }) {
   const [sortMode, setSortMode]   = useState("date");
   const [formOpen, setFormOpen]   = useState(false);
 
-  const sorted = useMemo(() => {
-    return [...projects].sort((a, b) =>
-      sortMode === "alpha"
-        ? a.name.localeCompare(b.name)
-        : new Date(b.created_at) - new Date(a.created_at)
-    );
-  }, [projects, sortMode]);
+  const sorted = useMemo(() => [...projects].sort((a,b) =>
+    sortMode === "alpha" ? a.name.localeCompare(b.name) : new Date(b.created_at) - new Date(a.created_at)
+  ), [projects, sortMode]);
 
   const submit = async () => {
     if (!name.trim()) { setErr("project name is required"); return; }
     setSaving(true); setErr(null);
     try {
-      // ── was: API.postProject(...)
-      const p = await createProject({
-        name: name.trim(),
-        short_description: shortDesc.trim(),
-        long_description: longDesc.trim(),
-      });
+      const p = await createProject({ name: name.trim(), short_description: shortDesc.trim(), long_description: longDesc.trim() });
       setProjects(arr => [p, ...arr]);
-      setName(""); setShortDesc(""); setLongDesc("");
-      setFormOpen(false);
+      setName(""); setShortDesc(""); setLongDesc(""); setFormOpen(false);
     } catch (e) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
   return (
     <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[15px] text-text font-medium tracking-tight">project hangar</div>
@@ -730,9 +784,7 @@ function ProjectHangar({ projects, setProjects }) {
             {[["date","by date"],["alpha","a → z"]].map(([k,v]) => (
               <button key={k} onClick={() => setSortMode(k)}
                 className="px-2.5 py-1 rounded-[5px] font-mono text-[10.5px] transition-colors"
-                style={sortMode === k ? { background: "#232535", color: "#DBDEE9" } : { color: "#7E8294" }}>
-                {v}
-              </button>
+                style={sortMode === k ? { background: "#232535", color: "#DBDEE9" } : { color: "#7E8294" }}>{v}</button>
             ))}
           </div>
           <button onClick={() => setFormOpen(f => !f)}
@@ -742,20 +794,18 @@ function ProjectHangar({ projects, setProjects }) {
         </div>
       </div>
 
-      {/* Add form */}
       {formOpen && (
         <div className="rounded-[10px] border border-teal/30 bg-surface p-5 space-y-3">
           <div className="label label-up">new project</div>
           <div className="space-y-2">
-            <input value={name} onChange={e => setName(e.target.value)}
-              placeholder="project name"
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="project name"
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-teal/60"
               style={{ fontFamily: "Fraunces, serif" }} />
             <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
               placeholder="short description — one line summary for dropdowns"
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-blue/60" />
             <textarea value={longDesc} onChange={e => setLongDesc(e.target.value)}
-              placeholder={"long description — architecture goals, context, open questions\n\ne.g. Migrating auth service from session cookies to JWTs.\nBlocking: need sec sign-off. Target: Q3."}
+              placeholder={"long description — architecture goals, context, open questions"}
               rows={6}
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed" />
           </div>
@@ -766,22 +816,17 @@ function ProjectHangar({ projects, setProjects }) {
               {I.check} {saving ? "saving…" : "create project"}
             </button>
             <button onClick={() => { setFormOpen(false); setErr(null); }}
-              className="px-3 py-1.5 rounded-[6px] border border-border text-sub text-[12px] font-mono hover:text-text">
-              cancel
-            </button>
+              className="px-3 py-1.5 rounded-[6px] border border-border text-sub text-[12px] font-mono hover:text-text">cancel</button>
           </div>
         </div>
       )}
 
-      {/* Project list */}
       {sorted.length === 0 ? (
         <div className="rounded-[10px] border border-border/50 bg-surface/40 p-10 text-center">
           <div className="label">no projects yet — create one above</div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sorted.map(p => <ProjectCard key={p.id} project={p} />)}
-        </div>
+        <div className="space-y-3">{sorted.map(p => <ProjectCard key={p.id} project={p} />)}</div>
       )}
     </div>
   );
@@ -797,9 +842,7 @@ function ProjectCard({ project }) {
         <div className="w-2 h-2 rounded-full bg-teal/70 mt-1.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-[14px] text-text font-medium tracking-tight">{project.name}</div>
-          {project.short_description && (
-            <div className="font-mono text-[11px] text-sub mt-0.5">{project.short_description}</div>
-          )}
+          {project.short_description && <div className="font-mono text-[11px] text-sub mt-0.5">{project.short_description}</div>}
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span className="label">{dateStr}</span>
@@ -828,14 +871,10 @@ function InterviewDeck({ projects }) {
   const [sortAlpha, setSortAlpha] = useState(false);
 
   useEffect(() => {
-    // ── was: API.getSessions()
-    getSessions()
-      .then(s => { setSessions(s); setLoading(false); })
-      .catch(() => setLoading(false));
+    getSessions().then(s => { setSessions(s); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   const handleDelete = async (id) => {
-    // ── was: API.deleteSession(id)
     await deleteSession(id);
     setSessions(arr => arr.filter(s => s.id !== id));
   };
@@ -847,93 +886,71 @@ function InterviewDeck({ projects }) {
       if (!byProject[key]) byProject[key] = [];
       byProject[key].push(s);
     }
-    let result = projects
-      .filter(p => byProject[p.id])
-      .map(p => ({ project: p, sessions: byProject[p.id] }));
-
+    let result = projects.filter(p => byProject[p.id]).map(p => ({ project: p, sessions: byProject[p.id] }));
     if (sortAlpha) result.sort((a,b) => a.project.name.localeCompare(b.project.name));
     else result.sort((a,b) => new Date(b.sessions[0].timestamp) - new Date(a.sessions[0].timestamp));
-
     return result;
   }, [projects, sessions, sortAlpha]);
 
-  if (loading) {
-    return <div className="flex-1 flex items-center justify-center"><div className="label animate-pulse">loading sessions…</div></div>;
-  }
+  if (loading) return <div className="flex-1 flex items-center justify-center"><div className="label animate-pulse">loading sessions…</div></div>;
 
   return (
     <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[15px] text-text font-medium tracking-tight">interview deck</div>
-          <div className="label mt-0.5">engineering projects with logged sessions · {grouped.length} projects</div>
+          <div className="label mt-0.5">engineering projects · {grouped.length} with sessions</div>
         </div>
         <div className="flex items-center gap-1 border border-border rounded-[6px] p-0.5">
           {[["recent","most recent"],["alpha","a → z"]].map(([k,v]) => (
             <button key={k} onClick={() => setSortAlpha(k === "alpha")}
               className="px-2.5 py-1 rounded-[5px] font-mono text-[10.5px] transition-colors"
-              style={(k === "alpha") === sortAlpha ? { background: "#232535", color: "#DBDEE9" } : { color: "#7E8294" }}>
-              {v}
-            </button>
+              style={(k === "alpha") === sortAlpha ? { background: "#232535", color: "#DBDEE9" } : { color: "#7E8294" }}>{v}</button>
           ))}
         </div>
       </div>
-
       {grouped.length === 0 ? (
         <div className="rounded-[10px] border border-border/50 bg-surface/40 p-10 text-center">
-          <div className="label">no engineering sessions logged yet</div>
+          <div className="label">no engineering sessions yet</div>
           <div className="label mt-1">start an [Engineering] session in the daily log and link it to a project</div>
         </div>
-      ) : (
-        grouped.map(({ project, sessions }) => (
-          <InterviewProjectSection key={project.id} project={project} sessions={sessions} onDelete={handleDelete} />
-        ))
-      )}
+      ) : grouped.map(({ project, sessions }) => (
+        <InterviewProjectSection key={project.id} project={project} sessions={sessions} onDelete={handleDelete} />
+      ))}
     </div>
   );
 }
 
 function InterviewProjectSection({ project, sessions, onDelete }) {
   const [open, setOpen] = useState(true);
-  const totalSec = sessions.reduce((a, s) => a + s.duration_seconds, 0);
-
+  const totalSec = sessions.reduce((a,s) => a + s.duration_seconds, 0);
   return (
     <div className="rounded-[10px] border border-border bg-surface overflow-hidden">
       <div className="flex items-start gap-4 p-5 border-b border-border/50">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
-            <div className="text-[15px] text-text font-medium tracking-tight" style={{ fontFamily: "Fraunces, serif" }}>
-              {project.name}
-            </div>
+            <div className="text-[15px] text-text font-medium tracking-tight" style={{ fontFamily: "Fraunces, serif" }}>{project.name}</div>
             <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border border-teal/30 text-teal">
               {sessions.length} session{sessions.length !== 1 ? "s" : ""}
             </span>
             <span className="font-mono text-[10.5px] text-sub">{fmtHours(totalSec)} total</span>
           </div>
-          {project.short_description && (
-            <div className="font-mono text-[11px] text-sub">{project.short_description}</div>
-          )}
+          {project.short_description && <div className="font-mono text-[11px] text-sub">{project.short_description}</div>}
         </div>
-        <button onClick={() => setOpen(o => !o)}
-          className="text-dim hover:text-sub transition-colors shrink-0 mt-1">
+        <button onClick={() => setOpen(o => !o)} className="text-dim hover:text-sub transition-colors shrink-0 mt-1">
           {open ? I.collapse : I.expand}
         </button>
       </div>
-
       {open && (
         <>
           {project.long_description && (
             <div className="px-5 py-4 border-b border-border/40 bg-overlay/40">
               <div className="label label-up mb-2">context & architecture</div>
-              <pre className="text-[12px] text-sub font-mono leading-relaxed whitespace-pre-wrap">
-                {project.long_description}
-              </pre>
+              <pre className="text-[12px] text-sub font-mono leading-relaxed whitespace-pre-wrap">{project.long_description}</pre>
             </div>
           )}
           <div className="divide-y divide-border/30">
-            {sessions.map(s => (
-              <InterviewSessionRow key={s.id} session={s} onDelete={() => onDelete(s.id)} />
-            ))}
+            {sessions.map(s => <InterviewSessionRow key={s.id} session={s} onDelete={() => onDelete(s.id)} />)}
           </div>
         </>
       )}
@@ -944,10 +961,7 @@ function InterviewProjectSection({ project, sessions, onDelete }) {
 function InterviewSessionRow({ session, onDelete }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const ts = new Date(session.timestamp);
-  const dateStr = isNaN(ts)
-    ? "—"
-    : ts.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + fmtTime(ts);
-
+  const dateStr = isNaN(ts) ? "—" : ts.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + fmtTime(ts);
   return (
     <div className="group px-5 py-3.5 hover:bg-surface/60 transition-colors">
       <div className="flex items-start gap-4">
@@ -966,8 +980,7 @@ function InterviewSessionRow({ session, onDelete }) {
             <div className="mt-2">
               <button onClick={() => setNotesOpen(n => !n)}
                 className="flex items-center gap-1.5 font-mono text-[10.5px] text-dim hover:text-rose/80 transition-colors">
-                {notesOpen ? I.collapse : I.expand}
-                {notesOpen ? "hide notes" : "expand notes"}
+                {notesOpen ? I.collapse : I.expand}{notesOpen ? "hide notes" : "expand notes"}
               </button>
               {notesOpen && (
                 <pre className="mt-2 text-[11px] text-sub font-mono leading-relaxed bg-overlay rounded-[6px] px-3 py-2.5 whitespace-pre-wrap border border-border/40">
@@ -987,6 +1000,184 @@ function InterviewSessionRow({ session, onDelete }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 4 · TASKS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function TasksTab({ tasks, setTasks, projects }) {
+  const [newText, setNewText]         = useState("");
+  const [newProjectId, setNewProjectId] = useState(null);
+  const [saving, setSaving]           = useState(false);
+  const [err, setErr]                 = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // task to delete
+  const inputRef                      = useRef(null);
+
+  const pending   = tasks.filter(t => !t.done);
+  const completed = tasks.filter(t => t.done);
+
+  const addTask = async () => {
+    if (!newText.trim()) return;
+    setSaving(true); setErr(null);
+    try {
+      const t = await createTask({ text: newText.trim(), project_id: newProjectId });
+      setTasks(arr => [t, ...arr]);
+      setNewText(""); setNewProjectId(null);
+      inputRef.current?.focus();
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleComplete = async (id) => {
+    const updated = await completeTask(id);
+    setTasks(arr => arr.map(t => t.id === id ? updated : t));
+  };
+
+  const handleUncomplete = async (id) => {
+    const updated = await uncompleteTask(id);
+    setTasks(arr => arr.map(t => t.id === id ? updated : t));
+  };
+
+  const handleDeleted = (id) => {
+    setTasks(arr => arr.filter(t => t.id !== id));
+  };
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+
+      {/* ── Add task bar ── */}
+      <div className="px-7 pt-6 pb-4 border-b border-border/60">
+        <div className="label label-up mb-3">add task</div>
+        <div className="flex gap-2">
+          <input ref={inputRef} value={newText} onChange={e => setNewText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") addTask(); }}
+            placeholder="what needs to get done?"
+            className="flex-1 bg-surface border border-border rounded-[6px] px-4 py-2.5 text-[13px] text-text outline-none focus:border-yellow/60 transition-colors"
+            style={{ fontFamily: "Fraunces, ui-serif, serif" }} />
+          <select value={newProjectId ?? ""}
+            onChange={e => setNewProjectId(e.target.value ? Number(e.target.value) : null)}
+            className="bg-surface border border-border rounded-[6px] px-3 py-2 text-[12px] text-sub font-mono outline-none focus:border-teal/60"
+            style={{ color: newProjectId ? "#DBDEE9" : "#7E8294" }}>
+            <option value="">no project</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button onClick={addTask} disabled={saving || !newText.trim()}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[6px] border border-yellow/50 font-mono text-[12px] disabled:opacity-40 transition-colors"
+            style={{ color: "#E0C189" }}>
+            {I.plus}{saving ? "adding…" : "add"}
+          </button>
+        </div>
+        {err && <div className="mt-1.5 font-mono text-[11px] text-orange">{err}</div>}
+      </div>
+
+      {/* ── Two-column board ── */}
+      <div className="flex-1 min-h-0 flex divide-x divide-border/60 overflow-hidden">
+
+        {/* Pending column */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 py-3 border-b border-border/40 flex items-center gap-2 bg-surface/30">
+            <span style={{ color: "#E0C189" }}>{I.tasks}</span>
+            <span className="label label-up">pending</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full ml-1"
+              style={{ background: "#E0C18922", color: "#E0C189" }}>
+              {pending.length}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {pending.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <div className="label">no pending tasks</div>
+                <div className="label mt-1">add one above ↑</div>
+              </div>
+            ) : pending.map(task => (
+              <TaskRow key={task.id} task={task} projects={projects}
+                onComplete={() => handleComplete(task.id)}
+                onRequestDelete={() => setDeleteTarget(task)} />
+            ))}
+          </div>
+        </div>
+
+        {/* Completed column */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 py-3 border-b border-border/40 flex items-center gap-2 bg-surface/30">
+            <span style={{ color: "#26E0A6" }}>{I.check}</span>
+            <span className="label label-up">completed</span>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full ml-1"
+              style={{ background: "#26E0A622", color: "#26E0A6" }}>
+              {completed.length}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {completed.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <div className="label">nothing completed yet</div>
+                <div className="label mt-1">check off a task to see it here</div>
+              </div>
+            ) : completed.map(task => (
+              <TaskRow key={task.id} task={task} projects={projects} done
+                onUncomplete={() => handleUncomplete(task.id)}
+                onRequestDelete={() => setDeleteTarget(task)} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Delete-with-reason modal */}
+      {deleteTarget && (
+        <DeleteTaskModal
+          task={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={handleDeleted}
+        />
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDelete }) {
+  const project = projects.find(p => p.id === task.project_id);
+  return (
+    <div className="group flex items-start gap-3 px-6 py-3.5 border-b border-border/30 hover:bg-surface/40 transition-colors">
+      {/* Checkbox */}
+      <button
+        onClick={done ? onUncomplete : onComplete}
+        title={done ? "mark incomplete" : "mark complete"}
+        className="mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors"
+        style={done
+          ? { borderColor: "#26E0A6", background: "#26E0A622" }
+          : { borderColor: "#3D4251" }}>
+        {done && <span style={{ color: "#26E0A6", transform: "scale(0.7)", display: "block" }}>{I.check}</span>}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <div className={`text-[13px] ${done ? "text-dim line-through" : "text-text"}`}>{task.text}</div>
+        <div className="flex items-center gap-3 mt-0.5">
+          {project && <span className="font-mono text-[10px] text-teal">↳ {project.name}</span>}
+          {done && task.done_at && (
+            <span className="font-mono text-[10px] text-dim">done {fmtDate(task.done_at)}</span>
+          )}
+          {!done && (
+            <span className="font-mono text-[10px] text-dim">added {fmtDate(task.created_at)}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        {done && (
+          <button onClick={onUncomplete} title="move back to pending"
+            className="p-1 rounded text-dim hover:text-sub transition-colors">
+            {I.undo}
+          </button>
+        )}
+        <button onClick={onRequestDelete} title="delete task"
+          className="p-1 rounded text-dim hover:text-rose transition-colors">
+          {I.trash}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -994,52 +1185,59 @@ export default function App() {
   const [active, setActive]               = useState("daily");
   const [now, setNow]                     = useState(new Date());
   const [projects, setProjects]           = useState([]);
+  const [tasks, setTasks]                 = useState([]);
   const [quickNoteOpen, setQuickNoteOpen] = useState(false);
   const [externalSession, setExternalSession] = useState(null);
   const [dbReady, setDbReady]             = useState(false);
-  // Break state — lifted here so TopBar can toggle it from anywhere in the app
   const [onBreak, setOnBreak]             = useState(false);
-  const toggleBreak = () => setOnBreak(b => !b);
+  const toggleBreak                       = () => setOnBreak(b => !b);
+  // Task delete modal state — lifted so MiniTaskList and TasksTab both use it
+  const [deleteTarget, setDeleteTarget]   = useState(null);
 
-  // ── 1. Initialise the database on first mount ─────────────────────────────
-  // initDb() is idempotent — safe to call every launch.
   useEffect(() => {
-    initDb()
-      .then(() => setDbReady(true))
-      .catch(err => console.error("DB init failed:", err));
+    initDb().then(() => setDbReady(true)).catch(err => console.error("DB init:", err));
   }, []);
 
-  // ── 2. Load projects once the DB is ready ────────────────────────────────
   useEffect(() => {
     if (!dbReady) return;
-    // ── was: API.getProjects()
     getProjects().then(setProjects).catch(() => {});
+    getTasks().then(setTasks).catch(() => {});
   }, [dbReady]);
 
-  // ── 3. Clock ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // ── 4. Keyboard shortcuts ─────────────────────────────────────────────────
   useEffect(() => {
-    const tabs = ["daily", "hangar", "interview"];
+    const tabs = ["daily", "hangar", "interview", "tasks"];
     const onKey = (e) => {
-      if (e.altKey && ["1","2","3"].includes(e.key)) {
-        e.preventDefault();
-        setActive(tabs[parseInt(e.key) - 1]);
+      if (e.altKey && ["1","2","3","4"].includes(e.key)) {
+        e.preventDefault(); setActive(tabs[parseInt(e.key) - 1]);
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "N") {
-        e.preventDefault();
-        setQuickNoteOpen(true);
+        e.preventDefault(); setQuickNoteOpen(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Show nothing until the DB is bootstrapped — avoids a flash of broken state
+  // Shared task action handlers — used by both MiniTaskList and TasksTab
+  const handleTaskComplete = async (id) => {
+    const updated = await completeTask(id);
+    setTasks(arr => arr.map(t => t.id === id ? updated : t));
+  };
+  const handleTaskUncomplete = async (id) => {
+    const updated = await uncompleteTask(id);
+    setTasks(arr => arr.map(t => t.id === id ? updated : t));
+  };
+  const handleTaskDeleted = (id) => {
+    setTasks(arr => arr.filter(t => t.id !== id));
+  };
+
+  const pendingCount = tasks.filter(t => !t.done).length;
+
   if (!dbReady) {
     return (
       <div className="h-full flex items-center justify-center bg-base">
@@ -1050,7 +1248,7 @@ export default function App() {
 
   return (
     <div className="h-full flex bg-base text-text">
-      <Sidebar active={active} setActive={setActive} />
+      <Sidebar active={active} setActive={setActive} pendingCount={pendingCount} />
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <TopBar now={now} active={active} onQuickNote={() => setQuickNoteOpen(true)}
           onBreak={toggleBreak} onBreakActive={onBreak} />
@@ -1058,22 +1256,40 @@ export default function App() {
           {active === "daily" && (
             <DailyLog
               projects={projects}
-              onSessionSaved={(s) => setExternalSession(s)}
+              onSessionSaved={s => setExternalSession(s)}
               externalSession={externalSession}
               breakActive={onBreak}
+              tasks={tasks}
+              onTaskComplete={handleTaskComplete}
+              onTaskUncomplete={handleTaskUncomplete}
+              onTaskRequestDelete={setDeleteTarget}
             />
           )}
           {active === "hangar"    && <ProjectHangar projects={projects} setProjects={setProjects} />}
           {active === "interview" && <InterviewDeck projects={projects} />}
+          {active === "tasks"     && (
+            <TasksTab
+              tasks={tasks}
+              setTasks={setTasks}
+              projects={projects}
+            />
+          )}
         </div>
       </main>
+
       {quickNoteOpen && (
         <QuickNoteModal
           onClose={() => setQuickNoteOpen(false)}
-          onSaved={(saved) => {
-            setExternalSession(saved);
-            setActive("daily");
-          }}
+          onSaved={(saved) => { setExternalSession(saved); setActive("daily"); }}
+        />
+      )}
+
+      {/* Global delete-task modal — triggered from anywhere */}
+      {deleteTarget && (
+        <DeleteTaskModal
+          task={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={handleTaskDeleted}
         />
       )}
     </div>
