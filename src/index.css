@@ -2,109 +2,100 @@
 
 /* ══════════════════════════════════════════════════════════════════════════════
    LOCAL FONT DECLARATIONS
-   All fonts are served from public/fonts/ — no Google Fonts, no network calls.
    ══════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Telma — display / logo font (sidebar title only) ────────────────────── */
-@font-face {
-  font-family: 'Telma';
-  src: url('/fonts/Telma-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Telma';
-  src: url('/fonts/Telma-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Telma';
-  src: url('/fonts/Telma-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Telma';
-  src: url('/fonts/Telma-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+@font-face { font-family:'Telma'; src:url('/fonts/Telma-Light.woff2') format('woff2'); font-weight:300; font-display:swap; }
+@font-face { font-family:'Telma'; src:url('/fonts/Telma-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Telma'; src:url('/fonts/Telma-Medium.woff2') format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Telma'; src:url('/fonts/Telma-Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+@font-face { font-family:'Lilex'; src:url('/fonts/LilexNerdFontPropo-Regular.ttf') format('truetype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Lilex'; src:url('/fonts/LilexNerdFontPropo-Italic.ttf') format('truetype'); font-weight:400; font-style:italic; font-display:swap; }
+@font-face { font-family:'Lilex'; src:url('/fonts/LilexNerdFontPropo-Medium.ttf') format('truetype'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Lilex'; src:url('/fonts/LilexNerdFontPropo-Bold.ttf') format('truetype'); font-weight:700; font-display:swap; }
+@font-face { font-family:'InconsolataGo'; src:url('/fonts/InconsolataGoNerdFontMono-Regular.ttf') format('truetype'); font-weight:400; font-display:swap; }
+@font-face { font-family:'InconsolataGo'; src:url('/fonts/InconsolataGoNerdFontMono-Bold.ttf') format('truetype'); font-weight:700; font-display:swap; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   THEME PALETTES — exact hex values from spec
+   Applied via data-theme on <html>. Every CSS variable the app uses
+   is defined here. Tailwind @theme maps these to utility classes.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Rosé Pine Moon (default) ── */
+:root,
+[data-theme="rose-pine-moon"] {
+  --base:    #232136;
+  --surface: #2a273f;
+  --overlay: #393552;
+  --hl:      #393552;   /* border — same as overlay, very subtle */
+  --text:    #e0def4;
+  --sub:     #908caa;
+  --dim:     #6e6a86;
+  --rose:    #eb6f92;   /* primary accent / love */
+  --iris:    #c4a7e7;   /* secondary accent */
+  --accent:  #c4a7e7;
+  --gold:    #f6c177;
+  --pine:    #3e8fb0;
+  --foam:    #9ccfd8;
 }
 
-/* ── Lilex — main UI sans-serif ───────────────────────────────────────────── */
-@font-face {
-  font-family: 'Lilex';
-  src: url('/fonts/LilexNerdFontPropo-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Lilex';
-  src: url('/fonts/LilexNerdFontPropo-Italic.ttf') format('truetype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Lilex';
-  src: url('/fonts/LilexNerdFontPropo-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Lilex';
-  src: url('/fonts/LilexNerdFontPropo-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+/* ── Catppuccin Mocha ── */
+[data-theme="catppuccin-mocha"] {
+  --base:    #1e1e2e;
+  --surface: #181825;
+  --overlay: #313244;
+  --hl:      #313244;
+  --text:    #cdd6f4;
+  --sub:     #a6adc8;
+  --dim:     #7f849c;
+  --rose:    #cba6f7;   /* primary accent / mauve */
+  --iris:    #f5c2e7;   /* secondary accent / pink */
+  --accent:  #cba6f7;
+  --gold:    #f9e2af;
+  --pine:    #94e2d5;
+  --foam:    #89dceb;
 }
 
-/* ── InconsolataGo — monospace (timer, labels, code blocks) ──────────────── */
-@font-face {
-  font-family: 'InconsolataGo';
-  src: url('/fonts/InconsolataGoNerdFontMono-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'InconsolataGo';
-  src: url('/fonts/InconsolataGoNerdFontMono-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+/* ── Tokyo Night ── */
+[data-theme="tokyo-night"] {
+  --base:    #1a1b26;
+  --surface: #1f2335;
+  --overlay: #292e42;
+  --hl:      #292e42;
+  --text:    #c0caf5;
+  --sub:     #565f89;
+  --dim:     #414868;
+  --rose:    #bb9af7;   /* primary accent / magenta */
+  --iris:    #7dcfff;   /* secondary accent / cyan */
+  --accent:  #bb9af7;
+  --gold:    #e0af68;
+  --pine:    #73daca;
+  --foam:    #7dcfff;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   TAILWIND THEME TOKENS
+   TAILWIND @theme — maps CSS vars to utility classes
+   bg-base, text-text, border-hl, bg-surface, text-rose, text-iris, etc.
    ══════════════════════════════════════════════════════════════════════════════ */
 
 @theme {
-  --color-base:      #181C2B;
-  --color-surface:   #232535;
-  --color-overlay:   #2A2D3E;
-  --color-muted:     #313548;
-  --color-border:    #3D4251;
-  --color-rose:      #F5A9BB;
-  --color-blue:      #BAADF4;
-  --color-purple:    #C4A7E7;
-  --color-cyan:      #70C4E4;
-  --color-teal:      #C4A7E7; /* remapped to purple — no green in palette */
-  --color-lightblue: #C4A7E7; /* remapped to purple */
-  --color-yellow:    #BAADF4; /* remapped to blue */
-  --color-orange:    #F5A9BB; /* remapped to rose for errors */
-  --color-text:      #DBDEE9;
-  --color-sub:       #A6ADCB;
-  --color-dim:       #7E8294;
+  /* Semantic color tokens — update with CSS vars via inline in components */
+  --color-base:    var(--base);
+  --color-surface: var(--surface);
+  --color-overlay: var(--overlay);
+  --color-hl:      var(--hl);
+  --color-text:    var(--text);
+  --color-sub:     var(--sub);
+  --color-dim:     var(--dim);
+  --color-rose:    var(--rose);
+  --color-iris:    var(--iris);
+  --color-accent:  var(--accent);
+  --color-gold:    var(--gold);
+  --color-pine:    var(--pine);
+  --color-foam:    var(--foam);
 
-  /* Font stack tokens used by Tailwind's font-sans / font-mono / font-serif */
-  --font-sans:    'Lilex', ui-sans-serif, system-ui;
+  /* Fonts */
+  --font-sans:    'InconsolataGo', ui-monospace, monospace;
   --font-mono:    'InconsolataGo', ui-monospace, monospace;
   --font-display: 'Telma', ui-sans-serif, system-ui;
 }
@@ -113,87 +104,54 @@
    BASE RESET
    ══════════════════════════════════════════════════════════════════════════════ */
 
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
+html, body, #root { height: 100%; margin: 0; padding: 0; }
 
 body {
-  background: #181C2B;
-  color: #DBDEE9;
-  /* Lilex for all general UI text */
-  font-family: 'Lilex', ui-sans-serif, system-ui, sans-serif;
+  background: var(--base);
+  color: var(--text);
+  font-family: 'InconsolataGo', ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-ligatures: none;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
 
-input, textarea, pre, p, span.selectable {
-  user-select: text;
-}
+input, textarea, pre, p { user-select: text; }
 
-/* ══════════════════════════════════════════════════════════════════════════════
-   CUSTOM UTILITY CLASSES
-   ══════════════════════════════════════════════════════════════════════════════ */
-
-/* .label — the monospace dimmed micro-text used everywhere for labels */
-.label {
-  font-family: 'InconsolataGo', ui-monospace, monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: lowercase;
-  color: #7E8294;
-}
-.label-up {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-
-/* .font-display — Tailwind utility for Telma */
-.font-display {
-  font-family: 'Telma', ui-sans-serif, system-ui;
-}
-
-.grid-bg {
-  background-image:
-    linear-gradient(to right, rgba(61,66,81,0.18) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(61,66,81,0.18) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-.stripes {
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgba(166,173,203,0.08) 0px,
-    rgba(166,173,203,0.08) 1px,
-    transparent 1px,
-    transparent 6px
-  );
-}
-
-/* ── Form elements ──────────────────────────────────────────────────────────── */
 input, textarea {
-  caret-color: #F5A9BB;
-  font-family: 'Lilex', ui-sans-serif, system-ui, sans-serif;
+  caret-color: var(--rose);
+  font-family: 'InconsolataGo', ui-monospace, monospace;
+  color: var(--text);
+  background: transparent;
 }
-input::placeholder, textarea::placeholder { color: #7E8294; }
+input::placeholder, textarea::placeholder { color: var(--dim); }
 
-::selection { background: rgba(245,169,187,0.25); color: #fff; }
+::selection { background: color-mix(in srgb, var(--rose) 30%, transparent); color: var(--text); }
 
-/* ── Scrollbars ─────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar        { width: 10px; height: 10px; }
+/* Sharp corners — WM aesthetic */
+*, *::before, *::after { border-radius: 0 !important; box-shadow: none !important; }
+
+/* Scrollbars */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: #2A2D3E; border-radius: 6px; border: 2px solid #181C2B; }
-::-webkit-scrollbar-thumb:hover { background: #3D4251; }
+::-webkit-scrollbar-thumb  { background: var(--overlay); }
+::-webkit-scrollbar-thumb:hover { background: var(--hl); }
 
 .tnum { font-variant-numeric: tabular-nums; }
+.font-display { font-family: 'Telma', ui-sans-serif, system-ui; }
 
-/* ── Animations ─────────────────────────────────────────────────────────────── */
-.blink { animation: blink 1.1s step-end infinite; }
-@keyframes blink { 50% { opacity: 0; } }
-
-.ring-pulse { animation: ringPulse 2.4s ease-in-out infinite; }
-@keyframes ringPulse {
-  0%, 100% { opacity: 0.5; }
+/* ── Animated progress bar ── */
+@keyframes bar-pulse {
+  0%, 100% { opacity: 0.7; }
   50%       { opacity: 1; }
+}
+.bar-running { animation: bar-pulse 1.4s ease-in-out infinite; }
+
+/* ── Sidebar active accent line ── */
+.sidebar-accent-line {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--rose);
 }
