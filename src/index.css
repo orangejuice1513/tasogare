@@ -95,10 +95,10 @@
   --color-blue:      #BAADF4;
   --color-purple:    #C4A7E7;
   --color-cyan:      #70C4E4;
-  --color-teal:      #26E0A6;
-  --color-lightblue: #9CD9F0;
-  --color-yellow:    #E0C189;
-  --color-orange:    #F6A487;
+  --color-teal:      #C4A7E7; /* remapped to purple — no green in palette */
+  --color-lightblue: #C4A7E7; /* remapped to purple */
+  --color-yellow:    #BAADF4; /* remapped to blue */
+  --color-orange:    #F5A9BB; /* remapped to rose for errors */
   --color-text:      #DBDEE9;
   --color-sub:       #A6ADCB;
   --color-dim:       #7E8294;

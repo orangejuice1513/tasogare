@@ -54,14 +54,16 @@ const I = {
   trash:    <Icon d={<><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></>} />,
   undo:     <Icon d={<><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.83-6.36L3 13"/></>} />,
   edit:     <Icon d={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>} />,
+  history:  <Icon d={<><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></>} />,
 };
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: "daily",     label: "daily log",     icon: I.clock,  accent: "#F5A9BB" },
-  { id: "hangar",    label: "projects",       icon: I.hangar, accent: "#26E0A6" },
-  { id: "interview", label: "interview deck", icon: I.deck,   accent: "#F5A9BB" },
-  { id: "tasks",     label: "tasks",          icon: I.tasks,  accent: "#E0C189" },
+  { id: "hangar",    label: "projects",       icon: I.hangar, accent: "#C4A7E7" },
+  { id: "interview", label: "interview deck", icon: I.deck,   accent: "#BAADF4" },
+  { id: "tasks",     label: "tasks",          icon: I.tasks,  accent: "#BAADF4" },
+  { id: "history",   label: "history",         icon: I.history, accent: "#C4A7E7" },
 ];
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -90,7 +92,7 @@ function Sidebar({ active, setActive, pendingCount }) {
               {/* Pending task badge */}
               {item.id === "tasks" && pendingCount > 0 && (
                 <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
-                  style={{ background: "#E0C18922", color: "#E0C189" }}>
+                  style={{ background: "#BAADF422", color: "#BAADF4" }}>
                   {pendingCount}
                 </span>
               )}
@@ -100,7 +102,7 @@ function Sidebar({ active, setActive, pendingCount }) {
       </nav>
       <div className="mt-auto px-5 pb-5 pt-6 border-t border-border/50 mx-3">
         <div className="label mb-1.5">keyboard</div>
-        {[["⌘ 1","daily log"],["⌘ 2","projects"],["⌘ 3","interview deck"],["⌘ 4","tasks"]].map(([k,v]) => (
+        {[["⌘ 1","daily log"],["⌘ 2","projects"],["⌘ 3","interview deck"],["⌘ 4","tasks"],["⌘ 5","history"]].map(([k,v]) => (
           <div key={k} className="flex items-center justify-between mt-1">
             <span className="label">{v}</span>
             <span className="font-mono text-[10px] text-dim bg-overlay px-1.5 py-0.5 rounded">{k}</span>
@@ -151,7 +153,7 @@ function TopBar({ now, active, onQuickNote, onBreak, onBreakActive }) {
 function TimerRing({ seconds, running, onBreak }) {
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
   const target = 90 * 60, progress = Math.min(seconds / target, 1), C = 2 * Math.PI * 78;
-  const statusDot  = onBreak ? "bg-rose animate-pulse" : running ? "bg-teal animate-pulse" : "bg-yellow";
+  const statusDot  = onBreak ? "bg-rose animate-pulse" : running ? "bg-rose animate-pulse" : "bg-blue";
   const statusLabel = onBreak ? "on break" : running ? "running" : "paused";
   return (
     <div className="rounded-[10px] border border-border bg-surface p-5">
@@ -241,7 +243,7 @@ function QuickNoteModal({ onClose, onSaved }) {
             placeholder={"jot anything — a decision, a blocker, a loose thought"}
             rows={7}
             className="w-full bg-overlay border border-border rounded-[8px] px-4 py-3 text-[13px] text-text font-mono leading-relaxed outline-none focus:border-rose/50 resize-none transition-colors" />
-          {err && <div className="mt-1.5 font-mono text-[11px] text-orange">{err}</div>}
+          {err && <div className="mt-1.5 font-mono text-[11px] text-rose/70">{err}</div>}
         </div>
         <div className="px-5 pb-5 flex items-center justify-between">
           <span className="font-mono text-[10px] text-dim">⌘↵ to save</span>
@@ -338,7 +340,7 @@ function DeleteTaskModal({ task, onClose, onDeleted }) {
               placeholder={"e.g. no longer relevant after the meeting\ne.g. decided to defer this to next sprint\ne.g. actually a duplicate of another task"}
               rows={4}
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2.5 text-[12.5px] text-text font-mono leading-relaxed outline-none focus:border-rose/60 resize-none transition-colors" />
-            {err && <div className="mt-1 font-mono text-[11px] text-orange">{err}</div>}
+            {err && <div className="mt-1 font-mono text-[11px] text-rose/70">{err}</div>}
           </div>
         </div>
         <div className="px-5 pb-5 flex items-center justify-between">
@@ -369,10 +371,10 @@ function MiniTaskList({ tasks, projects, onComplete, onUncomplete, onRequestDele
       <div className="rounded-[10px] border border-border/60 bg-surface overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40">
           <div className="flex items-center gap-2">
-            <span style={{ color: "#E0C189" }}>{I.tasks}</span>
+            <span style={{ color: "#BAADF4" }}>{I.tasks}</span>
             <span className="label label-up">backlog</span>
             <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{ background: "#E0C18922", color: "#E0C189" }}>
+              style={{ background: "#BAADF422", color: "#BAADF4" }}>
               {pending.length} pending
             </span>
           </div>
@@ -396,11 +398,11 @@ function MiniTaskList({ tasks, projects, onComplete, onUncomplete, onRequestDele
                 <div key={task.id} className="group flex items-start gap-3 px-4 py-2.5 hover:bg-overlay/40 transition-colors">
                   {/* Checkbox */}
                   <button onClick={() => onComplete(task.id)}
-                    className="mt-0.5 w-4 h-4 shrink-0 rounded border border-border hover:border-yellow transition-colors flex items-center justify-center">
+                    className="mt-0.5 w-4 h-4 shrink-0 rounded border border-border hover:border-blue transition-colors flex items-center justify-center">
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] text-text">{task.text}</div>
-                    {proj && <div className="font-mono text-[10px] text-teal">↳ {proj.name}</div>}
+                    {proj && <div className="font-mono text-[10px] text-purple">↳ {proj.name}</div>}
                   </div>
                   <button onClick={() => onRequestDelete(task)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-dim hover:text-rose"
@@ -419,9 +421,9 @@ function MiniTaskList({ tasks, projects, onComplete, onUncomplete, onRequestDele
             {completed.map(task => (
               <div key={task.id} className="group flex items-start gap-3 px-4 py-2.5">
                 <button onClick={() => onUncomplete(task.id)}
-                  className="mt-0.5 w-4 h-4 shrink-0 rounded border border-teal/50 bg-teal/10 flex items-center justify-center"
+                  className="mt-0.5 w-4 h-4 shrink-0 rounded border border-purple/50 bg-purple/10 flex items-center justify-center"
                   title="mark incomplete">
-                  <span style={{ color: "#26E0A6", transform: "scale(0.7)" }}>{I.check}</span>
+                  <span style={{ color: "#C4A7E7", transform: "scale(0.7)" }}>{I.check}</span>
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] text-dim line-through">{task.text}</div>
@@ -565,7 +567,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                   disabled={phase === "running" || phase === "logging"}
                   className="px-2.5 py-1 rounded-[6px] border font-mono text-[10.5px] tracking-wider transition-colors disabled:opacity-50"
                   style={sessionType === t
-                    ? { borderColor: t === "Engineering" ? "#26E0A6" : "#F5A9BB", color: t === "Engineering" ? "#26E0A6" : "#F5A9BB", background: t === "Engineering" ? "#26E0A622" : "#F5A9BB22" }
+                    ? { borderColor: t === "Engineering" ? "#C4A7E7" : "#F5A9BB", color: t === "Engineering" ? "#C4A7E7" : "#F5A9BB", background: t === "Engineering" ? "#C4A7E722" : "#F5A9BB22" }
                     : { borderColor: "#3D4251", color: "#7E8294" }}>
                   [{t}]
                 </button>
@@ -578,7 +580,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
               <select value={projectId ?? ""}
                 onChange={e => setProjectId(e.target.value ? Number(e.target.value) : null)}
                 disabled={phase === "running" || phase === "logging"}
-                className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono disabled:opacity-50 outline-none focus:border-teal/70"
+                className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono disabled:opacity-50 outline-none focus:border-purple/70"
                 style={{ color: projectId ? "#DBDEE9" : "#7E8294" }}>
                 <option value="">— link to project (optional) —</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -609,7 +611,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
             {phase === "idle" && (
               <div className="px-5 pb-3 pt-1 flex items-center gap-4 border-t border-border/50">
                 <span className="label">mode →</span>
-                <span className="font-mono text-[10.5px]" style={{ color: sessionType === "Engineering" ? "#26E0A6" : "#F5A9BB" }}>
+                <span className="font-mono text-[10.5px]" style={{ color: sessionType === "Engineering" ? "#C4A7E7" : "#F5A9BB" }}>
                   [{sessionType}]{selectedProject ? ` · ${selectedProject.name}` : ""}
                 </span>
                 <span className="ml-auto label">⏎ to commit and start timer</span>
@@ -622,12 +624,12 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
         {(phase === "running" || phase === "logging") && (
           <section className="px-7 pb-5">
             <div className="rounded-[10px] border bg-surface p-5 space-y-4"
-              style={{ borderColor: phase === "running" ? "#F5A9BB33" : "#26E0A633" }}>
+              style={{ borderColor: phase === "running" ? "#F5A9BB33" : "#C4A7E733" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="label label-up mb-1">{phase === "running" ? "in progress" : "log reality"}</div>
                   <div className="text-[14px] text-text" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{intent}</div>
-                  {selectedProject && <div className="font-mono text-[10.5px] text-teal mt-0.5">↳ {selectedProject.name}</div>}
+                  {selectedProject && <div className="font-mono text-[10.5px] text-purple mt-0.5">↳ {selectedProject.name}</div>}
                 </div>
                 <div className="font-mono text-[28px] text-text tnum" style={{ fontFamily: "InconsolataGo, ui-monospace, monospace" }}>{fmtDur(seconds)}</div>
               </div>
@@ -638,7 +640,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                       else { await invoke("resume_timer"); setRunning(true); }
                     }}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-[12px] font-mono"
-                    style={{ borderColor: running ? "#E0C189" : "#26E0A6", color: running ? "#E0C189" : "#26E0A6" }}>
+                    style={{ borderColor: running ? "#BAADF4" : "#C4A7E7", color: running ? "#BAADF4" : "#C4A7E7" }}>
                     {running ? I.pause : I.play}{running ? "pause" : "resume"}
                   </button>
                   <button onClick={stopSession}
@@ -663,10 +665,10 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                       rows={4}
                       className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed" />
                   </div>
-                  {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
+                  {err && <div className="font-mono text-[11px] text-rose/70">{err}</div>}
                   <div className="flex gap-2">
                     <button onClick={logSession} disabled={saving}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-teal/60 text-teal text-[12px] font-mono disabled:opacity-50">
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-purple/60 text-purple text-[12px] font-mono disabled:opacity-50">
                       {I.check} {saving ? "saving…" : "save session"}
                     </button>
                     <button onClick={discardSession}
@@ -696,7 +698,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
               ))
             )}
             <div className="px-7 py-5 border-t border-border/40 flex items-center gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-purple animate-pulse" />
               <span className="label">captured live</span>
               <span className="ml-auto label">end of log</span>
             </div>
@@ -711,8 +713,8 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
           <div className="label label-up mb-3">today's tally</div>
           <div className="space-y-2">
             <TallyRow label="sessions"    value={sessions.length.toString().padStart(2,"0")} color="#DBDEE9" />
-            <TallyRow label="engineering" value={sessions.filter(s=>s.type==="Engineering").length.toString().padStart(2,"0")} color="#26E0A6" />
-            <TallyRow label="total focus" value={fmtHours(sessions.reduce((a,s)=>a+s.duration_seconds,0))} color="#9CD9F0" />
+            <TallyRow label="engineering" value={sessions.filter(s=>s.type==="Engineering").length.toString().padStart(2,"0")} color="#C4A7E7" />
+            <TallyRow label="total focus" value={fmtHours(sessions.reduce((a,s)=>a+s.duration_seconds,0))} color="#C4A7E7" />
           </div>
         </div>
       </aside>
@@ -741,10 +743,10 @@ function SessionRow({ session, projects, onDelete }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border"
-              style={{ color: session.type === "Engineering" ? "#26E0A6" : "#F5A9BB", borderColor: session.type === "Engineering" ? "#26E0A633" : "#F5A9BB33" }}>
+              style={{ color: session.type === "Engineering" ? "#C4A7E7" : "#F5A9BB", borderColor: session.type === "Engineering" ? "#C4A7E733" : "#F5A9BB33" }}>
               {session.type}
             </span>
-            {project && <span className="font-mono text-[10.5px] text-teal">↳ {project.name}</span>}
+            {project && <span className="font-mono text-[10.5px] text-purple">↳ {project.name}</span>}
             <span className="ml-auto font-mono text-[11px] text-sub tnum">{fmtDur(session.duration_seconds)}</span>
           </div>
           <div className="text-[13px] text-text" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{session.intent}</div>
@@ -813,18 +815,18 @@ function ProjectHangar({ projects, setProjects }) {
             ))}
           </div>
           <button onClick={() => setFormOpen(f => !f)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-teal/50 text-teal text-[12px] font-mono hover:border-teal">
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-purple/50 text-purple text-[12px] font-mono hover:border-purple">
             {I.plus} new project
           </button>
         </div>
       </div>
 
       {formOpen && (
-        <div className="rounded-[10px] border border-teal/30 bg-surface p-5 space-y-3">
+        <div className="rounded-[10px] border border-purple/30 bg-surface p-5 space-y-3">
           <div className="label label-up">new project</div>
           <div className="space-y-2">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="project name"
-              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-teal/60"
+              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-purple/60"
               style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
             <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
               placeholder="short description — one line summary for dropdowns"
@@ -834,10 +836,10 @@ function ProjectHangar({ projects, setProjects }) {
               rows={6}
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed" />
           </div>
-          {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
+          {err && <div className="font-mono text-[11px] text-rose/70">{err}</div>}
           <div className="flex gap-2">
             <button onClick={submit} disabled={saving}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-teal/60 text-teal text-[12px] font-mono disabled:opacity-50">
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-purple/60 text-purple text-[12px] font-mono disabled:opacity-50">
               {I.check} {saving ? "saving…" : "create project"}
             </button>
             <button onClick={() => { setFormOpen(false); setErr(null); }}
@@ -933,7 +935,7 @@ function ProjectCard({ project, onUpdate, onDelete }) {
       {/* ── Card header ── */}
       <div className="flex items-start gap-4 p-4">
         {/* Expand toggle area */}
-        <div className="w-2 h-2 rounded-full bg-teal/70 mt-1.5 shrink-0 cursor-pointer"
+        <div className="w-2 h-2 rounded-full bg-purple/70 mt-1.5 shrink-0 cursor-pointer"
           onClick={() => !editing && setOpen(o => !o)} />
 
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !editing && setOpen(o => !o)}>
@@ -990,10 +992,10 @@ function ProjectCard({ project, onUpdate, onDelete }) {
             placeholder="long description — architecture goals, context, open questions"
             rows={5}
             className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed transition-colors" />
-          {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
+          {err && <div className="font-mono text-[11px] text-rose/70">{err}</div>}
           <div className="flex gap-2 pt-1">
             <button onClick={saveEdits} disabled={saving || !name.trim()}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-teal/60 text-teal text-[12px] font-mono disabled:opacity-50 transition-colors">
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-purple/60 text-purple text-[12px] font-mono disabled:opacity-50 transition-colors">
               {I.check} {saving ? "saving…" : "save changes"}
             </button>
             <button onClick={cancelEditing}
@@ -1086,7 +1088,7 @@ function InterviewProjectSection({ project, sessions, onDelete }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
             <div className="text-[15px] text-text font-medium tracking-tight" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{project.name}</div>
-            <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border border-teal/30 text-teal">
+            <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border border-purple/30 text-purple">
               {sessions.length} session{sessions.length !== 1 ? "s" : ""}
             </span>
             <span className="font-mono text-[10.5px] text-sub">{fmtHours(totalSec)} total</span>
@@ -1128,7 +1130,7 @@ function InterviewSessionRow({ session, onDelete }) {
           </div>
           {session.reality && (
             <div className="mt-1 flex items-start gap-2">
-              <span className="font-mono text-[10px] text-teal mt-[3px]">↳</span>
+              <span className="font-mono text-[10px] text-purple mt-[3px]">↳</span>
               <span className="text-[12px] text-sub">{session.reality}</span>
             </div>
           )}
@@ -1206,22 +1208,22 @@ function TasksTab({ tasks, setTasks, projects }) {
           <input ref={inputRef} value={newText} onChange={e => setNewText(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") addTask(); }}
             placeholder="what needs to get done?"
-            className="flex-1 bg-surface border border-border rounded-[6px] px-4 py-2.5 text-[13px] text-text outline-none focus:border-yellow/60 transition-colors"
+            className="flex-1 bg-surface border border-border rounded-[6px] px-4 py-2.5 text-[13px] text-text outline-none focus:border-blue/60 transition-colors"
             style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
           <select value={newProjectId ?? ""}
             onChange={e => setNewProjectId(e.target.value ? Number(e.target.value) : null)}
-            className="bg-surface border border-border rounded-[6px] px-3 py-2 text-[12px] text-sub font-mono outline-none focus:border-teal/60"
+            className="bg-surface border border-border rounded-[6px] px-3 py-2 text-[12px] text-sub font-mono outline-none focus:border-purple/60"
             style={{ color: newProjectId ? "#DBDEE9" : "#7E8294" }}>
             <option value="">no project</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button onClick={addTask} disabled={saving || !newText.trim()}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-[6px] border border-yellow/50 font-mono text-[12px] disabled:opacity-40 transition-colors"
-            style={{ color: "#E0C189" }}>
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[6px] border border-blue/50 font-mono text-[12px] disabled:opacity-40 transition-colors"
+            style={{ color: "#BAADF4" }}>
             {I.plus}{saving ? "adding…" : "add"}
           </button>
         </div>
-        {err && <div className="mt-1.5 font-mono text-[11px] text-orange">{err}</div>}
+        {err && <div className="mt-1.5 font-mono text-[11px] text-rose/70">{err}</div>}
       </div>
 
       {/* ── Two-column board ── */}
@@ -1230,10 +1232,10 @@ function TasksTab({ tasks, setTasks, projects }) {
         {/* Pending column */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 py-3 border-b border-border/40 flex items-center gap-2 bg-surface/30">
-            <span style={{ color: "#E0C189" }}>{I.tasks}</span>
+            <span style={{ color: "#BAADF4" }}>{I.tasks}</span>
             <span className="label label-up">pending</span>
             <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full ml-1"
-              style={{ background: "#E0C18922", color: "#E0C189" }}>
+              style={{ background: "#BAADF422", color: "#BAADF4" }}>
               {pending.length}
             </span>
           </div>
@@ -1255,10 +1257,10 @@ function TasksTab({ tasks, setTasks, projects }) {
         {/* Completed column */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 py-3 border-b border-border/40 flex items-center gap-2 bg-surface/30">
-            <span style={{ color: "#26E0A6" }}>{I.check}</span>
+            <span style={{ color: "#C4A7E7" }}>{I.check}</span>
             <span className="label label-up">completed</span>
             <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full ml-1"
-              style={{ background: "#26E0A622", color: "#26E0A6" }}>
+              style={{ background: "#C4A7E722", color: "#C4A7E7" }}>
               {completed.length}
             </span>
           </div>
@@ -1331,9 +1333,9 @@ function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDele
         title={done ? "mark incomplete" : "mark complete"}
         className="mt-[3px] w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors"
         style={done
-          ? { borderColor: "#26E0A6", background: "#26E0A622" }
+          ? { borderColor: "#C4A7E7", background: "#C4A7E722" }
           : { borderColor: "#3D4251" }}>
-        {done && <span style={{ color: "#26E0A6", transform: "scale(0.7)", display: "block" }}>{I.check}</span>}
+        {done && <span style={{ color: "#C4A7E7", transform: "scale(0.7)", display: "block" }}>{I.check}</span>}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -1351,13 +1353,13 @@ function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDele
               <select
                 value={editProject ?? ""}
                 onChange={e => setEditProject(e.target.value ? Number(e.target.value) : null)}
-                className="flex-1 bg-overlay border border-border rounded-[5px] px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-teal/50 transition-colors"
+                className="flex-1 bg-overlay border border-border rounded-[5px] px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-purple/50 transition-colors"
                 style={{ color: editProject ? "#DBDEE9" : "#7E8294" }}>
                 <option value="">no project</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <button onClick={saveEdit} disabled={saving || !editText.trim()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[5px] border border-teal/50 text-teal font-mono text-[11px] disabled:opacity-40 transition-colors hover:border-teal shrink-0">
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[5px] border border-purple/50 text-purple font-mono text-[11px] disabled:opacity-40 transition-colors hover:border-purple shrink-0">
                 {I.check}{saving ? "…" : "save"}
               </button>
               <button onClick={cancelEdit}
@@ -1372,7 +1374,7 @@ function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDele
             <div className={`text-[13px] ${done ? "text-dim line-through" : "text-text"}`}>{task.text}</div>
             <div className="flex items-center gap-3 mt-0.5">
               {project
-                ? <span className="font-mono text-[10px] text-teal">↳ {project.name}</span>
+                ? <span className="font-mono text-[10px] text-purple">↳ {project.name}</span>
                 : <span className="font-mono text-[10px] text-dim">no project</span>
               }
               {done && task.done_at && (
@@ -1410,6 +1412,308 @@ function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDele
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 5 · HISTORY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Returns "Mon 5", "Tue 6" etc for a date
+function fmtDayLabel(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
+}
+
+// Given an ISO timestamp string, return "YYYY-MM-DD" in local time
+function toLocalDateKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+// Generate last N days as "YYYY-MM-DD" keys, newest last
+function lastNDays(n) {
+  const days = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+  }
+  return days;
+}
+
+function HistoryTab() {
+  const [allSessions, setAllSessions] = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [weekOffset, setWeekOffset]   = useState(0); // 0 = this week, 1 = last week, etc.
+  const [hoveredDay, setHoveredDay]   = useState(null);
+
+  useEffect(() => {
+    getSessions()
+      .then(s => { setAllSessions(s); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Build the 7-day window for the current weekOffset
+  const days = useMemo(() => {
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i - weekOffset * 7);
+      result.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+    }
+    return result;
+  }, [weekOffset]);
+
+  // Aggregate sessions by day for this window
+  const dayData = useMemo(() => {
+    return days.map(dateKey => {
+      const daySessions = allSessions.filter(s => toLocalDateKey(s.timestamp) === dateKey);
+      const routine    = daySessions.filter(s => s.type === "Routine").reduce((a,s)=>a+s.duration_seconds,0);
+      const engineering = daySessions.filter(s => s.type === "Engineering").reduce((a,s)=>a+s.duration_seconds,0);
+      return { dateKey, routine, engineering, sessions: daySessions };
+    });
+  }, [days, allSessions]);
+
+  // Summary stats for the current week window
+  const weekTotal    = dayData.reduce((a,d)=>a+d.routine+d.engineering, 0);
+  const weekRoutine  = dayData.reduce((a,d)=>a+d.routine, 0);
+  const weekEng      = dayData.reduce((a,d)=>a+d.engineering, 0);
+  const weekSessions = dayData.reduce((a,d)=>a+d.sessions.length, 0);
+
+  // Chart dimensions
+  const maxSec = Math.max(...dayData.map(d => d.routine + d.engineering), 3600); // at least 1h scale
+  const chartH = 180;
+  const barW   = 48;
+  const gap    = 16;
+  const chartW = days.length * (barW + gap) - gap;
+
+  // Week label
+  const weekStart = new Date(days[0]);
+  const weekEnd   = new Date(days[6]);
+  const weekLabel = weekOffset === 0 ? "this week"
+    : weekOffset === 1 ? "last week"
+    : `${weekStart.toLocaleDateString(undefined,{month:"short",day:"numeric"})} – ${weekEnd.toLocaleDateString(undefined,{month:"short",day:"numeric"})}`;
+
+  if (loading) {
+    return <div className="flex-1 flex items-center justify-center"><div className="label animate-pulse">loading history…</div></div>;
+  }
+
+  const hovered = hoveredDay !== null ? dayData[hoveredDay] : null;
+
+  return (
+    <div className="flex-1 overflow-y-auto px-7 py-6 space-y-6">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[15px] text-text font-medium tracking-tight">focus history</div>
+          <div className="label mt-0.5">daily breakdown · routine vs engineering</div>
+        </div>
+        {/* Week navigator */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setWeekOffset(w => w + 1)}
+            className="px-3 py-1.5 rounded-[6px] border border-border text-sub font-mono text-[11px] hover:text-text hover:border-border/80 transition-colors">
+            ← older
+          </button>
+          <span className="font-mono text-[11px] text-sub px-3">{weekLabel}</span>
+          <button onClick={() => setWeekOffset(w => Math.max(0, w - 1))}
+            disabled={weekOffset === 0}
+            className="px-3 py-1.5 rounded-[6px] border border-border text-sub font-mono text-[11px] hover:text-text hover:border-border/80 transition-colors disabled:opacity-30">
+            newer →
+          </button>
+        </div>
+      </div>
+
+      {/* ── Week summary cards ── */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: "total focus",   value: fmtHours(weekTotal),    color: "#DBDEE9" },
+          { label: "sessions",      value: weekSessions.toString(), color: "#DBDEE9" },
+          { label: "routine",       value: fmtHours(weekRoutine),   color: "#F5A9BB" },
+          { label: "engineering",   value: fmtHours(weekEng),       color: "#C4A7E7" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="rounded-[10px] border border-border bg-surface px-4 py-3.5">
+            <div className="label mb-1.5">{label}</div>
+            <div className="font-mono text-[22px] font-light tnum" style={{ color, fontFamily: "InconsolataGo, monospace" }}>
+              {value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Bar chart ── */}
+      <div className="rounded-[10px] border border-border bg-surface p-5">
+        <div className="flex items-center justify-between mb-5">
+          <span className="label label-up">daily breakdown</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#F5A9BB" }} />
+              <span className="label">routine</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#C4A7E7" }} />
+              <span className="label">engineering</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <svg width={chartW + 48} height={chartH + 52} style={{ display: "block" }}>
+            {/* Hour guide lines */}
+            {[1,2,3,4].map(h => {
+              const y = chartH - (h * 3600 / maxSec) * chartH;
+              if (y < 0) return null;
+              return (
+                <g key={h}>
+                  <line x1={40} y1={y} x2={chartW + 44} y2={y}
+                    stroke="#3D4251" strokeWidth="1" strokeDasharray="3,4" />
+                  <text x={36} y={y + 4} textAnchor="end"
+                    style={{ fontSize: 9, fill: "#7E8294", fontFamily: "InconsolataGo, monospace" }}>
+                    {h}h
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Bars */}
+            {dayData.map((d, i) => {
+              const x    = 44 + i * (barW + gap);
+              const engH = Math.round((d.engineering / maxSec) * chartH);
+              const rotH = Math.round((d.routine / maxSec) * chartH);
+              const totalH = engH + rotH;
+              const isHovered = hoveredDay === i;
+              const isToday = d.dateKey === lastNDays(1)[0];
+
+              return (
+                <g key={d.dateKey}
+                  onMouseEnter={() => setHoveredDay(i)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  style={{ cursor: "default" }}>
+                  {/* Hover background */}
+                  {isHovered && (
+                    <rect x={x - 4} y={0} width={barW + 8} height={chartH}
+                      fill="#FFFFFF08" rx={4} />
+                  )}
+                  {/* Engineering segment (bottom) */}
+                  {engH > 0 && (
+                    <rect x={x} y={chartH - totalH} width={barW} height={engH}
+                      fill={isHovered ? "#C4A7E7" : "#C4A7E755"}
+                      rx={engH === totalH ? 3 : 0}
+                      style={{ transition: "fill 0.15s" }} />
+                  )}
+                  {/* Routine segment (top) */}
+                  {rotH > 0 && (
+                    <rect x={x} y={chartH - totalH + engH} width={barW} height={rotH}
+                      fill={isHovered ? "#F5A9BB" : "#F5A9BB55"}
+                      rx={engH === 0 ? 3 : 0}
+                      style={{ transition: "fill 0.15s" }} />
+                  )}
+                  {/* Empty bar ghost */}
+                  {totalH === 0 && (
+                    <rect x={x} y={chartH - 3} width={barW} height={3}
+                      fill="#2A2D3E" rx={1.5} />
+                  )}
+                  {/* Rounded top cap */}
+                  {totalH > 3 && (
+                    <rect x={x} y={chartH - totalH} width={barW} height={4}
+                      fill={rotH > 0 ? (isHovered ? "#F5A9BB" : "#F5A9BB55") : (isHovered ? "#C4A7E7" : "#C4A7E755")}
+                      rx={3}
+                      style={{ transition: "fill 0.15s" }} />
+                  )}
+                  {/* Day label */}
+                  <text x={x + barW / 2} y={chartH + 18} textAnchor="middle"
+                    style={{
+                      fontSize: 10, fontFamily: "InconsolataGo, monospace",
+                      fill: isToday ? "#F5A9BB" : isHovered ? "#DBDEE9" : "#7E8294",
+                      fontWeight: isToday ? "bold" : "normal",
+                    }}>
+                    {fmtDayLabel(d.dateKey)}
+                  </text>
+                  {/* Today dot */}
+                  {isToday && (
+                    <circle cx={x + barW / 2} cy={chartH + 30} r={2} fill="#F5A9BB" />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Hover tooltip */}
+        {hovered && (
+          <div className="mt-3 pt-3 border-t border-border/40 flex items-center gap-6">
+            <span className="font-mono text-[11px] text-sub">{fmtDayLabel(hovered.dateKey)}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-sm" style={{ background: "#F5A9BB" }} />
+              <span className="label">routine</span>
+              <span className="font-mono text-[12px] text-text ml-1">{fmtHours(hovered.routine)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-sm" style={{ background: "#C4A7E7" }} />
+              <span className="label">engineering</span>
+              <span className="font-mono text-[12px] text-text ml-1">{fmtHours(hovered.engineering)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <span className="label">total</span>
+              <span className="font-mono text-[13px] text-text">{fmtHours(hovered.routine + hovered.engineering)}</span>
+            </div>
+            <span className="font-mono text-[11px] text-dim">{hovered.sessions.length} session{hovered.sessions.length !== 1 ? "s" : ""}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Session list for the week ── */}
+      <div className="rounded-[10px] border border-border bg-surface overflow-hidden">
+        <div className="px-5 py-3 border-b border-border/40 flex items-center gap-3">
+          <span className="label label-up">sessions this window</span>
+          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
+            style={{ background: "#C4A7E722", color: "#C4A7E7" }}>
+            {weekSessions}
+          </span>
+        </div>
+        {weekSessions === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <div className="label">no sessions logged in this window</div>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30 max-h-[360px] overflow-y-auto">
+            {[...dayData].reverse().map(({ dateKey, sessions }) =>
+              sessions.length === 0 ? null : (
+                <div key={dateKey}>
+                  {/* Day header */}
+                  <div className="px-5 py-2 bg-overlay/30 flex items-center justify-between">
+                    <span className="font-mono text-[10.5px] text-sub">{fmtDayLabel(dateKey)}</span>
+                    <span className="font-mono text-[10.5px] text-dim">
+                      {fmtHours(sessions.reduce((a,s)=>a+s.duration_seconds,0))}
+                    </span>
+                  </div>
+                  {/* Sessions */}
+                  {sessions.map(s => (
+                    <div key={s.id} className="flex items-start gap-4 px-5 py-3 hover:bg-surface/60 transition-colors">
+                      <span className="font-mono text-[10px] text-dim tnum pt-0.5 w-12 shrink-0">{fmtTime(new Date(s.timestamp))}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12.5px] text-text">{s.intent || <span className="text-dim italic">no intent</span>}</div>
+                        {s.reality && <div className="font-mono text-[10.5px] text-sub mt-0.5">↳ {s.reality}</div>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono text-[10px] px-1.5 py-[2px] rounded"
+                          style={{
+                            color: s.type === "Engineering" ? "#C4A7E7" : "#F5A9BB",
+                            background: s.type === "Engineering" ? "#C4A7E711" : "#F5A9BB11",
+                          }}>
+                          {s.type === "Engineering" ? "eng" : "rtn"}
+                        </span>
+                        <span className="font-mono text-[10.5px] text-dim tnum">{fmtDur(s.duration_seconds)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1442,10 +1746,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const tabs = ["daily", "hangar", "interview", "tasks"];
+    const tabs = ["daily", "hangar", "interview", "tasks", "history"];
     const onKey = (e) => {
       // ⌘1–4 to switch tabs (⌥/Alt is intercepted by Tauri before reaching the webview)
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && ["1","2","3","4"].includes(e.key)) {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && ["1","2","3","4","5"].includes(e.key)) {
         e.preventDefault(); setActive(tabs[parseInt(e.key) - 1]);
       }
       // ⌘⇧N for quick note
@@ -1513,6 +1817,9 @@ export default function App() {
               setTasks={setTasks}
               projects={projects}
             />
+          </div>
+          <div className={`flex-1 min-h-0 overflow-hidden flex flex-col ${active === "history" ? "" : "hidden"}`}>
+            <HistoryTab />
           </div>
         </div>
       </main>
