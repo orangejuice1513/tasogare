@@ -8,7 +8,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   initDb, getProjects, createProject, updateProject, deleteProject,
   getSessions, createSession, deleteSession,
-  getTasks, createTask, completeTask, uncompleteTask, deleteTask,
+  getTasks, createTask, updateTask, completeTask, uncompleteTask, deleteTask,
 } from "./db";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ const I = {
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "daily",     label: "daily log",     icon: I.clock,  accent: "#BAADF4" },
+  { id: "daily",     label: "daily log",     icon: I.clock,  accent: "#F5A9BB" },
   { id: "hangar",    label: "projects",       icon: I.hangar, accent: "#26E0A6" },
   { id: "interview", label: "interview deck", icon: I.deck,   accent: "#F5A9BB" },
   { id: "tasks",     label: "tasks",          icon: I.tasks,  accent: "#E0C189" },
@@ -166,7 +166,7 @@ function TimerRing({ seconds, running, onBreak }) {
         <svg viewBox="0 0 180 180" className="absolute inset-0 -rotate-90">
           <circle cx="90" cy="90" r="78" fill="none" stroke="#2A2D3E" strokeWidth="2" />
           <circle cx="90" cy="90" r="78" fill="none"
-            stroke={onBreak ? "#F5A9BB" : "#BAADF4"} strokeWidth="2"
+            stroke={onBreak ? "#F5A9BB" : "#F5A9BB"} strokeWidth="2"
             strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - progress)}
             style={{ transition: "stroke-dashoffset 0.4s linear, stroke 0.3s ease" }} />
           {Array.from({ length: 60 }).map((_, i) => {
@@ -185,7 +185,7 @@ function TimerRing({ seconds, running, onBreak }) {
             <span className="text-[40px] font-light tracking-tight text-text leading-none">{pad(m)}</span>
             <span className="text-[24px] text-dim leading-none">:</span>
             <span className="text-[40px] font-light tracking-tight leading-none"
-              style={{ color: onBreak ? "#F5A9BB" : "#BAADF4" }}>{pad(s)}</span>
+              style={{ color: running && !onBreak ? "#F5A9BB" : "#7E8294" }}>{pad(s)}</span>
           </div>
           <div className="mt-2 label">target · 90m deep block</div>
           <div className="mt-1 font-mono text-[10.5px] text-sub tnum">{Math.round(progress * 100)}% complete</div>
@@ -240,7 +240,7 @@ function QuickNoteModal({ onClose, onSaved }) {
             onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save(); }}
             placeholder={"jot anything — a decision, a blocker, a loose thought"}
             rows={7}
-            className="w-full bg-overlay border border-border rounded-[8px] px-4 py-3 text-[13px] text-text font-mono leading-relaxed outline-none focus:border-blue/60 resize-none transition-colors" />
+            className="w-full bg-overlay border border-border rounded-[8px] px-4 py-3 text-[13px] text-text font-mono leading-relaxed outline-none focus:border-rose/50 resize-none transition-colors" />
           {err && <div className="mt-1.5 font-mono text-[11px] text-orange">{err}</div>}
         </div>
         <div className="px-5 pb-5 flex items-center justify-between">
@@ -248,7 +248,7 @@ function QuickNoteModal({ onClose, onSaved }) {
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 rounded-[6px] border border-border text-[12px] text-sub font-mono hover:text-text transition-colors">cancel</button>
             <button onClick={save} disabled={saving || !text.trim()}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] border border-blue/50 text-blue text-[12px] font-mono hover:border-blue disabled:opacity-40 transition-colors">
+              className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] border border-rose/50 text-rose text-[12px] font-mono hover:border-rose disabled:opacity-40 transition-colors">
               {I.check}{saving ? "saving…" : "save note"}
             </button>
           </div>
@@ -565,7 +565,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                   disabled={phase === "running" || phase === "logging"}
                   className="px-2.5 py-1 rounded-[6px] border font-mono text-[10.5px] tracking-wider transition-colors disabled:opacity-50"
                   style={sessionType === t
-                    ? { borderColor: t === "Engineering" ? "#26E0A6" : "#BAADF4", color: t === "Engineering" ? "#26E0A6" : "#BAADF4", background: t === "Engineering" ? "#26E0A622" : "#BAADF422" }
+                    ? { borderColor: t === "Engineering" ? "#26E0A6" : "#F5A9BB", color: t === "Engineering" ? "#26E0A6" : "#F5A9BB", background: t === "Engineering" ? "#26E0A622" : "#F5A9BB22" }
                     : { borderColor: "#3D4251", color: "#7E8294" }}>
                   [{t}]
                 </button>
@@ -589,9 +589,9 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
             </div>
           )}
 
-          <div className="relative rounded-[10px] border border-border bg-surface focus-within:border-blue/70 transition-colors">
+          <div className="relative rounded-[10px] border border-border bg-surface focus-within:border-rose/60 transition-colors">
             <div className="flex items-center pl-5 pr-3 py-4 gap-4">
-              <span className="text-blue text-[15px] font-mono leading-none mt-0.5">›</span>
+              <span className="text-sub text-[15px] font-mono leading-none mt-0.5">›</span>
               <input value={intent} onChange={e => setIntent(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && phase === "idle" && startSession()}
                 placeholder={HINTS[hint]}
@@ -601,7 +601,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
               {phase === "idle" && (
                 <button onClick={startSession} disabled={!intent.trim()}
                   className="px-3 py-1.5 rounded-[6px] border text-[12px] flex items-center gap-2 disabled:opacity-40 transition-colors"
-                  style={{ borderColor: intent.trim() ? "#BAADF4" : "#3D4251", color: intent.trim() ? "#BAADF4" : "#7E8294" }}>
+                  style={{ borderColor: intent.trim() ? "#F5A9BB" : "#3D4251", color: intent.trim() ? "#F5A9BB" : "#7E8294" }}>
                   <span>commit + start</span><span className="font-mono text-[10.5px]">⏎</span>
                 </button>
               )}
@@ -609,7 +609,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
             {phase === "idle" && (
               <div className="px-5 pb-3 pt-1 flex items-center gap-4 border-t border-border/50">
                 <span className="label">mode →</span>
-                <span className="font-mono text-[10.5px]" style={{ color: sessionType === "Engineering" ? "#26E0A6" : "#BAADF4" }}>
+                <span className="font-mono text-[10.5px]" style={{ color: sessionType === "Engineering" ? "#26E0A6" : "#F5A9BB" }}>
                   [{sessionType}]{selectedProject ? ` · ${selectedProject.name}` : ""}
                 </span>
                 <span className="ml-auto label">⏎ to commit and start timer</span>
@@ -622,7 +622,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
         {(phase === "running" || phase === "logging") && (
           <section className="px-7 pb-5">
             <div className="rounded-[10px] border bg-surface p-5 space-y-4"
-              style={{ borderColor: phase === "running" ? "#BAADF433" : "#26E0A633" }}>
+              style={{ borderColor: phase === "running" ? "#F5A9BB33" : "#26E0A633" }}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="label label-up mb-1">{phase === "running" ? "in progress" : "log reality"}</div>
@@ -653,7 +653,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                     <div className="label mb-1.5">reality — what actually happened?</div>
                     <input value={reality} onChange={e => setReality(e.target.value)}
                       placeholder="shipped 6/9 tooltips, blocked on copy review…"
-                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-blue/60"
+                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-rose/50"
                       style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
                   </div>
                   <div>
@@ -661,7 +661,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                     <textarea value={debriefNotes} onChange={e => setDebriefNotes(e.target.value)}
                       placeholder={"- p95 latency spiked during deploy\n- next: open issue + tag @ravi"}
                       rows={4}
-                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed" />
+                      className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed" />
                   </div>
                   {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
                   <div className="flex gap-2">
@@ -710,7 +710,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
         <div className="mt-4 rounded-[10px] border border-border bg-surface p-4">
           <div className="label label-up mb-3">today's tally</div>
           <div className="space-y-2">
-            <TallyRow label="sessions"    value={sessions.length.toString().padStart(2,"0")} color="#BAADF4" />
+            <TallyRow label="sessions"    value={sessions.length.toString().padStart(2,"0")} color="#DBDEE9" />
             <TallyRow label="engineering" value={sessions.filter(s=>s.type==="Engineering").length.toString().padStart(2,"0")} color="#26E0A6" />
             <TallyRow label="total focus" value={fmtHours(sessions.reduce((a,s)=>a+s.duration_seconds,0))} color="#9CD9F0" />
           </div>
@@ -741,7 +741,7 @@ function SessionRow({ session, projects, onDelete }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border"
-              style={{ color: session.type === "Engineering" ? "#26E0A6" : "#BAADF4", borderColor: session.type === "Engineering" ? "#26E0A633" : "#BAADF433" }}>
+              style={{ color: session.type === "Engineering" ? "#26E0A6" : "#F5A9BB", borderColor: session.type === "Engineering" ? "#26E0A633" : "#F5A9BB33" }}>
               {session.type}
             </span>
             {project && <span className="font-mono text-[10.5px] text-teal">↳ {project.name}</span>}
@@ -828,11 +828,11 @@ function ProjectHangar({ projects, setProjects }) {
               style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
             <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
               placeholder="short description — one line summary for dropdowns"
-              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-blue/60" />
+              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-rose/50" />
             <textarea value={longDesc} onChange={e => setLongDesc(e.target.value)}
               placeholder={"long description — architecture goals, context, open questions"}
               rows={6}
-              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed" />
+              className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed" />
           </div>
           {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
           <div className="flex gap-2">
@@ -950,7 +950,7 @@ function ProjectCard({ project, onUpdate, onDelete }) {
           {/* Edit button */}
           {!editing && (
             <button onClick={startEditing} title="edit project"
-              className="p-1.5 rounded-[5px] text-dim hover:text-blue transition-colors">
+              className="p-1.5 rounded-[5px] text-dim hover:text-rose transition-colors">
               {I.edit}
             </button>
           )}
@@ -982,14 +982,14 @@ function ProjectCard({ project, onUpdate, onDelete }) {
           <div className="label label-up mb-2">editing project</div>
           <input value={name} onChange={e => setName(e.target.value)}
             placeholder="project name"
-            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-blue/60 transition-colors" />
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-rose/50 transition-colors" />
           <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
             placeholder="short description — one line summary for dropdowns"
-            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-blue/60 transition-colors" />
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-rose/50 transition-colors" />
           <textarea value={longDesc} onChange={e => setLongDesc(e.target.value)}
             placeholder="long description — architecture goals, context, open questions"
             rows={5}
-            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed transition-colors" />
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-rose/50 resize-y leading-relaxed transition-colors" />
           {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
           <div className="flex gap-2 pt-1">
             <button onClick={saveEdits} disabled={saving || !name.trim()}
@@ -1246,7 +1246,8 @@ function TasksTab({ tasks, setTasks, projects }) {
             ) : pending.map(task => (
               <TaskRow key={task.id} task={task} projects={projects}
                 onComplete={() => handleComplete(task.id)}
-                onRequestDelete={() => setDeleteTarget(task)} />
+                onRequestDelete={() => setDeleteTarget(task)}
+                onUpdated={(updated) => setTasks(arr => arr.map(t => t.id === updated.id ? updated : t))} />
             ))}
           </div>
         </div>
@@ -1270,7 +1271,8 @@ function TasksTab({ tasks, setTasks, projects }) {
             ) : completed.map(task => (
               <TaskRow key={task.id} task={task} projects={projects} done
                 onUncomplete={() => handleUncomplete(task.id)}
-                onRequestDelete={() => setDeleteTarget(task)} />
+                onRequestDelete={() => setDeleteTarget(task)}
+                onUpdated={(updated) => setTasks(arr => arr.map(t => t.id === updated.id ? updated : t))} />
             ))}
           </div>
         </div>
@@ -1288,15 +1290,46 @@ function TasksTab({ tasks, setTasks, projects }) {
   );
 }
 
-function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDelete }) {
+function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDelete, onUpdated }) {
+  const [editing, setEditing]       = useState(false);
+  const [editText, setEditText]     = useState(task.text);
+  const [editProject, setEditProject] = useState(task.project_id);
+  const [saving, setSaving]         = useState(false);
+  const inputRef                    = useRef(null);
   const project = projects.find(p => p.id === task.project_id);
+
+  const startEdit = (e) => {
+    e.stopPropagation();
+    setEditText(task.text);
+    setEditProject(task.project_id);
+    setEditing(true);
+    // Focus the text input on next tick after render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const cancelEdit = () => setEditing(false);
+
+  const saveEdit = async () => {
+    if (!editText.trim()) return;
+    setSaving(true);
+    try {
+      const updated = await updateTask(task.id, {
+        text: editText.trim(),
+        project_id: editProject,
+      });
+      onUpdated(updated);
+      setEditing(false);
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
   return (
     <div className="group flex items-start gap-3 px-6 py-3.5 border-b border-border/30 hover:bg-surface/40 transition-colors">
       {/* Checkbox */}
       <button
         onClick={done ? onUncomplete : onComplete}
         title={done ? "mark incomplete" : "mark complete"}
-        className="mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors"
+        className="mt-[3px] w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors"
         style={done
           ? { borderColor: "#26E0A6", background: "#26E0A622" }
           : { borderColor: "#3D4251" }}>
@@ -1304,31 +1337,74 @@ function TaskRow({ task, projects, done, onComplete, onUncomplete, onRequestDele
       </button>
 
       <div className="flex-1 min-w-0">
-        <div className={`text-[13px] ${done ? "text-dim line-through" : "text-text"}`}>{task.text}</div>
-        <div className="flex items-center gap-3 mt-0.5">
-          {project && <span className="font-mono text-[10px] text-teal">↳ {project.name}</span>}
-          {done && task.done_at && (
-            <span className="font-mono text-[10px] text-dim">done {fmtDate(task.done_at)}</span>
-          )}
-          {!done && (
-            <span className="font-mono text-[10px] text-dim">added {fmtDate(task.created_at)}</span>
-          )}
-        </div>
+        {editing ? (
+          /* ── Inline edit form ── */
+          <div className="space-y-2 py-0.5">
+            <input
+              ref={inputRef}
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+              className="w-full bg-overlay border border-border rounded-[5px] px-2.5 py-1.5 text-[13px] text-text outline-none focus:border-rose/50 transition-colors"
+            />
+            <div className="flex items-center gap-2">
+              <select
+                value={editProject ?? ""}
+                onChange={e => setEditProject(e.target.value ? Number(e.target.value) : null)}
+                className="flex-1 bg-overlay border border-border rounded-[5px] px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-teal/50 transition-colors"
+                style={{ color: editProject ? "#DBDEE9" : "#7E8294" }}>
+                <option value="">no project</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <button onClick={saveEdit} disabled={saving || !editText.trim()}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[5px] border border-teal/50 text-teal font-mono text-[11px] disabled:opacity-40 transition-colors hover:border-teal shrink-0">
+                {I.check}{saving ? "…" : "save"}
+              </button>
+              <button onClick={cancelEdit}
+                className="px-2.5 py-1.5 rounded-[5px] border border-border text-sub font-mono text-[11px] hover:text-text transition-colors shrink-0">
+                cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ── Display mode ── */
+          <div>
+            <div className={`text-[13px] ${done ? "text-dim line-through" : "text-text"}`}>{task.text}</div>
+            <div className="flex items-center gap-3 mt-0.5">
+              {project
+                ? <span className="font-mono text-[10px] text-teal">↳ {project.name}</span>
+                : <span className="font-mono text-[10px] text-dim">no project</span>
+              }
+              {done && task.done_at && (
+                <span className="font-mono text-[10px] text-dim">done {fmtDate(task.done_at)}</span>
+              )}
+              {!done && (
+                <span className="font-mono text-[10px] text-dim">added {fmtDate(task.created_at)}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        {done && (
-          <button onClick={onUncomplete} title="move back to pending"
-            className="p-1 rounded text-dim hover:text-sub transition-colors">
-            {I.undo}
+      {/* Actions — only visible on hover, hidden while editing */}
+      {!editing && (
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button onClick={startEdit} title="edit task"
+            className="p-1 rounded text-dim hover:text-rose transition-colors">
+            {I.edit}
           </button>
-        )}
-        <button onClick={onRequestDelete} title="delete task"
-          className="p-1 rounded text-dim hover:text-rose transition-colors">
-          {I.trash}
-        </button>
-      </div>
+          {done && (
+            <button onClick={onUncomplete} title="move back to pending"
+              className="p-1 rounded text-dim hover:text-sub transition-colors">
+              {I.undo}
+            </button>
+          )}
+          <button onClick={onRequestDelete} title="delete task"
+            className="p-1 rounded text-dim hover:text-rose transition-colors">
+            {I.trash}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -140,6 +140,16 @@ export async function createTask({ text, project_id = null }) {
   return rows[0];
 }
 
+export async function updateTask(id, { text, project_id }) {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE tasks SET text = $1, project_id = $2 WHERE id = $3",
+    [text, project_id, id]
+  );
+  const rows = await db.select("SELECT * FROM tasks WHERE id = $1", [id]);
+  return rows[0];
+}
+
 export async function completeTask(id) {
   const db = await getDb();
   await db.execute(

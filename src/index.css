@@ -173,12 +173,12 @@ input, textarea, pre, p, span.selectable {
 
 /* ── Form elements ──────────────────────────────────────────────────────────── */
 input, textarea {
-  caret-color: #BAADF4;
+  caret-color: #F5A9BB;
   font-family: 'Lilex', ui-sans-serif, system-ui, sans-serif;
 }
 input::placeholder, textarea::placeholder { color: #7E8294; }
 
-::selection { background: rgba(186,173,244,0.3); color: #fff; }
+::selection { background: rgba(245,169,187,0.25); color: #fff; }
 
 /* ── Scrollbars ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 10px; height: 10px; }
