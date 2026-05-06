@@ -1,6 +1,90 @@
 @import "tailwindcss";
 
-/* ── Rosé Pine Moon design tokens ──────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════════
+   LOCAL FONT DECLARATIONS
+   All fonts are served from public/fonts/ — no Google Fonts, no network calls.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Telma — display / logo font (sidebar title only) ────────────────────── */
+@font-face {
+  font-family: 'Telma';
+  src: url('/fonts/Telma-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Telma';
+  src: url('/fonts/Telma-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Telma';
+  src: url('/fonts/Telma-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Telma';
+  src: url('/fonts/Telma-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Lilex — main UI sans-serif ───────────────────────────────────────────── */
+@font-face {
+  font-family: 'Lilex';
+  src: url('/fonts/LilexNerdFontPropo-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lilex';
+  src: url('/fonts/LilexNerdFontPropo-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lilex';
+  src: url('/fonts/LilexNerdFontPropo-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Lilex';
+  src: url('/fonts/LilexNerdFontPropo-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── InconsolataGo — monospace (timer, labels, code blocks) ──────────────── */
+@font-face {
+  font-family: 'InconsolataGo';
+  src: url('/fonts/InconsolataGoNerdFontMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InconsolataGo';
+  src: url('/fonts/InconsolataGoNerdFontMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TAILWIND THEME TOKENS
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 @theme {
   --color-base:      #181C2B;
   --color-surface:   #232535;
@@ -19,12 +103,16 @@
   --color-sub:       #A6ADCB;
   --color-dim:       #7E8294;
 
-  --font-sans:  'Geist', ui-sans-serif, system-ui;
-  --font-mono:  'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Fraunces', ui-serif, serif;
+  /* Font stack tokens used by Tailwind's font-sans / font-mono / font-serif */
+  --font-sans:    'Lilex', ui-sans-serif, system-ui;
+  --font-mono:    'InconsolataGo', ui-monospace, monospace;
+  --font-display: 'Telma', ui-sans-serif, system-ui;
 }
 
-/* ── Base reset ─────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════════
+   BASE RESET
+   ══════════════════════════════════════════════════════════════════════════════ */
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -34,30 +122,36 @@ html, body, #root {
 body {
   background: #181C2B;
   color: #DBDEE9;
-  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: "ss01", "cv11";
+  /* Lilex for all general UI text */
+  font-family: 'Lilex', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* Prevent Tauri's default text selection highlight on drag */
   user-select: none;
 }
 
-/* Allow text selection inside inputs and text content areas */
 input, textarea, pre, p, span.selectable {
   user-select: text;
 }
 
-/* ── Custom utility classes (used throughout App.jsx) ──────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════════
+   CUSTOM UTILITY CLASSES
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* .label — the monospace dimmed micro-text used everywhere for labels */
 .label {
-  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-family: 'InconsolataGo', ui-monospace, monospace;
   font-size: 10.5px;
   letter-spacing: 0.14em;
   text-transform: lowercase;
   color: #7E8294;
 }
-
 .label-up {
   text-transform: uppercase;
   letter-spacing: 0.18em;
+}
+
+/* .font-display — Tailwind utility for Telma */
+.font-display {
+  font-family: 'Telma', ui-sans-serif, system-ui;
 }
 
 .grid-bg {
@@ -80,16 +174,11 @@ input, textarea, pre, p, span.selectable {
 /* ── Form elements ──────────────────────────────────────────────────────────── */
 input, textarea {
   caret-color: #BAADF4;
+  font-family: 'Lilex', ui-sans-serif, system-ui, sans-serif;
 }
-input::placeholder, textarea::placeholder {
-  color: #7E8294;
-}
+input::placeholder, textarea::placeholder { color: #7E8294; }
 
-/* ── Selection highlight ────────────────────────────────────────────────────── */
-::selection {
-  background: rgba(186,173,244,0.3);
-  color: #fff;
-}
+::selection { background: rgba(186,173,244,0.3); color: #fff; }
 
 /* ── Scrollbars ─────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar        { width: 10px; height: 10px; }
@@ -97,7 +186,6 @@ input::placeholder, textarea::placeholder {
 ::-webkit-scrollbar-thumb  { background: #2A2D3E; border-radius: 6px; border: 2px solid #181C2B; }
 ::-webkit-scrollbar-thumb:hover { background: #3D4251; }
 
-/* ── Utility: tabular numbers ───────────────────────────────────────────────── */
 .tnum { font-variant-numeric: tabular-nums; }
 
 /* ── Animations ─────────────────────────────────────────────────────────────── */

@@ -67,6 +67,24 @@ export async function createProject({ name, short_description = "", long_descrip
   return rows[0];
 }
 
+export async function updateProject({ id, name, short_description, long_description }) {
+  if (!name.trim()) throw new Error("name is required");
+  const db = await getDb();
+  await db.execute(
+    "UPDATE projects SET name = $1, short_description = $2, long_description = $3 WHERE id = $4",
+    [name.trim(), short_description, long_description, id]
+  );
+  const rows = await db.select("SELECT * FROM projects WHERE id = $1", [id]);
+  return rows[0];
+}
+
+// Hard delete — sessions and tasks with this project_id become unlinked (SET NULL)
+export async function deleteProject(id) {
+  const db = await getDb();
+  const result = await db.execute("DELETE FROM projects WHERE id = $1", [id]);
+  if (result.rowsAffected === 0) throw new Error(`project ${id} not found`);
+}
+
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
 export async function getSessions(projectId = null) {

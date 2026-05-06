@@ -4,8 +4,9 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
-  initDb, getProjects, createProject,
+  initDb, getProjects, createProject, updateProject, deleteProject,
   getSessions, createSession, deleteSession,
   getTasks, createTask, completeTask, uncompleteTask, deleteTask,
 } from "./db";
@@ -52,6 +53,7 @@ const I = {
   collapse: <Icon d={<><path d="M18 15l-6-6-6 6"/></>} />,
   trash:    <Icon d={<><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></>} />,
   undo:     <Icon d={<><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 2.83-6.36L3 13"/></>} />,
+  edit:     <Icon d={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>} />,
 };
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────
@@ -70,7 +72,7 @@ function Sidebar({ active, setActive, pendingCount }) {
         <div className="flex items-center gap-2.5">
           <img src="/icon.png" alt="tasogare" className="w-8 h-8 rounded-[6px] shrink-0" />
           <div className="leading-tight">
-            <div className="text-[12.5px] font-medium text-text tracking-tight">tasogare</div>
+            <div className="text-[12.5px] font-medium text-text tracking-tight font-display">tasogare</div>
             <div className="label">mission control</div>
           </div>
         </div>
@@ -98,7 +100,7 @@ function Sidebar({ active, setActive, pendingCount }) {
       </nav>
       <div className="mt-auto px-5 pb-5 pt-6 border-t border-border/50 mx-3">
         <div className="label mb-1.5">keyboard</div>
-        {[["⌥ 1","daily log"],["⌥ 2","projects"],["⌥ 3","interview deck"],["⌥ 4","tasks"]].map(([k,v]) => (
+        {[["⌘ 1","daily log"],["⌘ 2","projects"],["⌘ 3","interview deck"],["⌘ 4","tasks"]].map(([k,v]) => (
           <div key={k} className="flex items-center justify-between mt-1">
             <span className="label">{v}</span>
             <span className="font-mono text-[10px] text-dim bg-overlay px-1.5 py-0.5 rounded">{k}</span>
@@ -177,7 +179,7 @@ function TimerRing({ seconds, running, onBreak }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="label mb-1.5">{onBreak ? "paused · on break" : "elapsed"}</div>
-          <div className="flex items-baseline gap-1 tnum" style={{ fontFamily: "Geist Mono, monospace" }}>
+          <div className="flex items-baseline gap-1 tnum" style={{ fontFamily: "InconsolataGo, ui-monospace, monospace" }}>
             <span className="text-[40px] font-light tracking-tight text-text leading-none">{pad(h)}</span>
             <span className="text-[24px] text-dim leading-none">:</span>
             <span className="text-[40px] font-light tracking-tight text-text leading-none">{pad(m)}</span>
@@ -476,33 +478,52 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
     return () => clearInterval(id);
   }, []);
 
+  // Poll Rust for the true elapsed seconds every second (display only).
+  // The actual clock lives in Rust and is never throttled by macOS.
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => setSeconds(s => s + 1), 1000);
+    const id = setInterval(async () => {
+      const elapsed = await invoke("get_elapsed");
+      setSeconds(Number(elapsed));
+    }, 1000);
     return () => clearInterval(id);
   }, [running]);
 
+  // Break: pause or resume the Rust timer when the global break toggle changes
   useEffect(() => {
     if (phase !== "running") return;
-    setRunning(!breakActive);
+    if (breakActive) {
+      invoke("pause_timer");
+      setRunning(false);
+    } else {
+      invoke("resume_timer");
+      setRunning(true);
+    }
   }, [breakActive]);
 
-  const startSession = () => {
+  const startSession = async () => {
     if (!intent.trim()) return;
+    await invoke("start_timer");
     setPhase("running"); setSeconds(0); setRunning(true);
     setReality(""); setDebriefNotes(""); setErr(null);
   };
 
-  const stopSession  = () => { setRunning(false); setPhase("logging"); };
+  const stopSession = async () => {
+    await invoke("pause_timer"); // freeze display while user types reality
+    setRunning(false);
+    setPhase("logging");
+  };
 
   const logSession = async () => {
     setSaving(true); setErr(null);
     try {
+      // stop_timer resets Rust state and gives us the authoritative duration
+      const finalSeconds = await invoke("stop_timer");
       const saved = await createSession({
         type: sessionType,
         project_id: sessionType === "Engineering" ? projectId : null,
         intent: intent.trim(), reality: reality.trim(),
-        notes: debriefNotes.trim(), duration_seconds: seconds,
+        notes: debriefNotes.trim(), duration_seconds: Number(finalSeconds),
       });
       setSessions(arr => [saved, ...arr]);
       onSessionSaved && onSessionSaved(saved);
@@ -511,7 +532,8 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
     finally { setSaving(false); }
   };
 
-  const discardSession = () => {
+  const discardSession = async () => {
+    await invoke("stop_timer"); // reset Rust state
     setSeconds(0); setRunning(false); setPhase("idle"); setReality(""); setDebriefNotes("");
   };
 
@@ -575,7 +597,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                 placeholder={HINTS[hint]}
                 disabled={phase === "running" || phase === "logging"}
                 className="flex-1 bg-transparent outline-none text-[19px] tracking-tight text-text font-light placeholder:text-dim disabled:opacity-60"
-                style={{ fontFamily: "Fraunces, ui-serif, serif" }} />
+                style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
               {phase === "idle" && (
                 <button onClick={startSession} disabled={!intent.trim()}
                   className="px-3 py-1.5 rounded-[6px] border text-[12px] flex items-center gap-2 disabled:opacity-40 transition-colors"
@@ -604,14 +626,17 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
               <div className="flex items-center justify-between">
                 <div>
                   <div className="label label-up mb-1">{phase === "running" ? "in progress" : "log reality"}</div>
-                  <div className="text-[14px] text-text" style={{ fontFamily: "Fraunces, serif" }}>{intent}</div>
+                  <div className="text-[14px] text-text" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{intent}</div>
                   {selectedProject && <div className="font-mono text-[10.5px] text-teal mt-0.5">↳ {selectedProject.name}</div>}
                 </div>
-                <div className="font-mono text-[28px] text-text tnum" style={{ fontFamily: "Geist Mono, monospace" }}>{fmtDur(seconds)}</div>
+                <div className="font-mono text-[28px] text-text tnum" style={{ fontFamily: "InconsolataGo, ui-monospace, monospace" }}>{fmtDur(seconds)}</div>
               </div>
               {phase === "running" && (
                 <div className="flex gap-2">
-                  <button onClick={() => setRunning(r => !r)}
+                  <button onClick={async () => {
+                      if (running) { await invoke("pause_timer"); setRunning(false); }
+                      else { await invoke("resume_timer"); setRunning(true); }
+                    }}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border text-[12px] font-mono"
                     style={{ borderColor: running ? "#E0C189" : "#26E0A6", color: running ? "#E0C189" : "#26E0A6" }}>
                     {running ? I.pause : I.play}{running ? "pause" : "resume"}
@@ -629,7 +654,7 @@ function DailyLog({ projects, onSessionSaved, externalSession, breakActive, task
                     <input value={reality} onChange={e => setReality(e.target.value)}
                       placeholder="shipped 6/9 tooltips, blocked on copy review…"
                       className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-blue/60"
-                      style={{ fontFamily: "Fraunces, serif" }} />
+                      style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
                   </div>
                   <div>
                     <div className="label mb-1.5">debrief notes / bug log <span className="text-dim">(optional)</span></div>
@@ -699,7 +724,7 @@ function TallyRow({ label, value, color }) {
   return (
     <div className="flex items-center justify-between">
       <span className="label">{label}</span>
-      <span className="font-mono text-[18px] font-light tnum" style={{ color, fontFamily: "Geist Mono" }}>{value}</span>
+      <span className="font-mono text-[18px] font-light tnum" style={{ color, fontFamily: "InconsolataGo, ui-monospace, monospace" }}>{value}</span>
     </div>
   );
 }
@@ -722,7 +747,7 @@ function SessionRow({ session, projects, onDelete }) {
             {project && <span className="font-mono text-[10.5px] text-teal">↳ {project.name}</span>}
             <span className="ml-auto font-mono text-[11px] text-sub tnum">{fmtDur(session.duration_seconds)}</span>
           </div>
-          <div className="text-[13px] text-text" style={{ fontFamily: "Fraunces, serif" }}>{session.intent}</div>
+          <div className="text-[13px] text-text" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{session.intent}</div>
           {session.reality && <div className="mt-1 text-[12px] text-sub">↳ {session.reality}</div>}
           {session.notes && (
             <div className="mt-2">
@@ -800,7 +825,7 @@ function ProjectHangar({ projects, setProjects }) {
           <div className="space-y-2">
             <input value={name} onChange={e => setName(e.target.value)} placeholder="project name"
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-teal/60"
-              style={{ fontFamily: "Fraunces, serif" }} />
+              style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
             <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
               placeholder="short description — one line summary for dropdowns"
               className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-blue/60" />
@@ -826,30 +851,161 @@ function ProjectHangar({ projects, setProjects }) {
           <div className="label">no projects yet — create one above</div>
         </div>
       ) : (
-        <div className="space-y-3">{sorted.map(p => <ProjectCard key={p.id} project={p} />)}</div>
+        <div className="space-y-3">
+          {sorted.map(p => (
+            <ProjectCard key={p.id} project={p}
+              onUpdate={(updated) => setProjects(arr => arr.map(x => x.id === updated.id ? updated : x))}
+              onDelete={(id) => setProjects(arr => arr.filter(x => x.id !== id))}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function ProjectCard({ project }) {
-  const [open, setOpen] = useState(false);
+function ProjectCard({ project, onUpdate, onDelete }) {
+  const [open, setOpen]           = useState(false);
+  const [editing, setEditing]     = useState(false);
+  const [confirming, setConfirming] = useState(false); // delete confirm state
+  const [name, setName]           = useState(project.name);
+  const [shortDesc, setShortDesc] = useState(project.short_description);
+  const [longDesc, setLongDesc]   = useState(project.long_description);
+  const [saving, setSaving]       = useState(false);
+  const [deleting, setDeleting]   = useState(false);
+  const [err, setErr]             = useState(null);
+
   const createdAt = new Date(project.created_at);
   const dateStr = isNaN(createdAt) ? "—" : createdAt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+  const startEditing = (e) => {
+    e.stopPropagation();
+    setName(project.name);
+    setShortDesc(project.short_description);
+    setLongDesc(project.long_description);
+    setErr(null);
+    setEditing(true);
+    setOpen(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setErr(null);
+  };
+
+  const saveEdits = async () => {
+    if (!name.trim()) { setErr("name cannot be empty"); return; }
+    setSaving(true); setErr(null);
+    try {
+      const updated = await updateProject({
+        id: project.id,
+        name: name.trim(),
+        short_description: shortDesc.trim(),
+        long_description: longDesc.trim(),
+      });
+      onUpdate(updated);
+      setEditing(false);
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!confirming) {
+      setConfirming(true);
+      // Auto-cancel confirm after 3s if user doesn't follow through
+      setTimeout(() => setConfirming(false), 3000);
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteProject(project.id);
+      onDelete(project.id);
+    } catch (e) {
+      setErr(e.message);
+      setDeleting(false);
+      setConfirming(false);
+    }
+  };
+
   return (
-    <div className="rounded-[10px] border border-border bg-surface hover:border-border/80 transition-colors">
-      <div className="flex items-start gap-4 p-4 cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div className="w-2 h-2 rounded-full bg-teal/70 mt-1.5 shrink-0" />
-        <div className="flex-1 min-w-0">
+    <div className={`rounded-[10px] border bg-surface transition-colors ${confirming ? "border-rose/50" : "border-border hover:border-border/80"}`}>
+      {/* ── Card header ── */}
+      <div className="flex items-start gap-4 p-4">
+        {/* Expand toggle area */}
+        <div className="w-2 h-2 rounded-full bg-teal/70 mt-1.5 shrink-0 cursor-pointer"
+          onClick={() => !editing && setOpen(o => !o)} />
+
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !editing && setOpen(o => !o)}>
           <div className="text-[14px] text-text font-medium tracking-tight">{project.name}</div>
-          {project.short_description && <div className="font-mono text-[11px] text-sub mt-0.5">{project.short_description}</div>}
+          {project.short_description && (
+            <div className="font-mono text-[11px] text-sub mt-0.5">{project.short_description}</div>
+          )}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+
+        {/* Action buttons — always visible on hover */}
+        <div className="flex items-center gap-2 shrink-0">
           <span className="label">{dateStr}</span>
-          <span className="text-dim">{open ? I.collapse : I.expand}</span>
+
+          {/* Edit button */}
+          {!editing && (
+            <button onClick={startEditing} title="edit project"
+              className="p-1.5 rounded-[5px] text-dim hover:text-blue transition-colors">
+              {I.edit}
+            </button>
+          )}
+
+          {/* Delete button — two-click confirm */}
+          {!editing && (
+            <button onClick={handleDelete} disabled={deleting}
+              title={confirming ? "click again to confirm delete" : "delete project"}
+              className="p-1.5 rounded-[5px] font-mono text-[10px] transition-all disabled:opacity-40"
+              style={confirming
+                ? { color: "#F5A9BB", background: "#F5A9BB11", border: "1px solid #F5A9BB55", borderRadius: "5px", padding: "4px 8px" }
+                : { color: "#7E8294" }}>
+              {deleting ? "…" : confirming ? "! confirm delete" : I.trash}
+            </button>
+          )}
+
+          {/* Expand chevron */}
+          {!editing && (
+            <span className="text-dim cursor-pointer" onClick={() => setOpen(o => !o)}>
+              {open ? I.collapse : I.expand}
+            </span>
+          )}
         </div>
       </div>
-      {open && project.long_description && (
+
+      {/* ── Edit form (shown when editing) ── */}
+      {editing && (
+        <div className="px-4 pb-4 border-t border-border/40 space-y-2.5 pt-3">
+          <div className="label label-up mb-2">editing project</div>
+          <input value={name} onChange={e => setName(e.target.value)}
+            placeholder="project name"
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text outline-none focus:border-blue/60 transition-colors" />
+          <input value={shortDesc} onChange={e => setShortDesc(e.target.value)}
+            placeholder="short description — one line summary for dropdowns"
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[13px] text-text font-mono outline-none focus:border-blue/60 transition-colors" />
+          <textarea value={longDesc} onChange={e => setLongDesc(e.target.value)}
+            placeholder="long description — architecture goals, context, open questions"
+            rows={5}
+            className="w-full bg-overlay border border-border rounded-[6px] px-3 py-2 text-[12.5px] text-text font-mono outline-none focus:border-blue/60 resize-y leading-relaxed transition-colors" />
+          {err && <div className="font-mono text-[11px] text-orange">{err}</div>}
+          <div className="flex gap-2 pt-1">
+            <button onClick={saveEdits} disabled={saving || !name.trim()}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] border border-teal/60 text-teal text-[12px] font-mono disabled:opacity-50 transition-colors">
+              {I.check} {saving ? "saving…" : "save changes"}
+            </button>
+            <button onClick={cancelEditing}
+              className="px-3 py-1.5 rounded-[6px] border border-border text-sub text-[12px] font-mono hover:text-text transition-colors">
+              cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Expanded long description (shown when open and not editing) ── */}
+      {open && !editing && project.long_description && (
         <div className="px-4 pb-4 pt-0 border-t border-border/40">
           <div className="label label-up mb-2 pt-3">description</div>
           <pre className="text-[12.5px] text-sub font-mono leading-relaxed whitespace-pre-wrap bg-overlay rounded-[6px] p-3 border border-border/40">
@@ -929,7 +1085,7 @@ function InterviewProjectSection({ project, sessions, onDelete }) {
       <div className="flex items-start gap-4 p-5 border-b border-border/50">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
-            <div className="text-[15px] text-text font-medium tracking-tight" style={{ fontFamily: "Fraunces, serif" }}>{project.name}</div>
+            <div className="text-[15px] text-text font-medium tracking-tight" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>{project.name}</div>
             <span className="font-mono text-[10.5px] px-1.5 py-[2px] rounded border border-teal/30 text-teal">
               {sessions.length} session{sessions.length !== 1 ? "s" : ""}
             </span>
@@ -967,7 +1123,7 @@ function InterviewSessionRow({ session, onDelete }) {
       <div className="flex items-start gap-4">
         <div className="font-mono text-[10.5px] text-dim tnum pt-0.5 w-20 shrink-0">{dateStr}</div>
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-text" style={{ fontFamily: "Fraunces, serif" }}>
+          <div className="text-[13px] text-text" style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }}>
             {session.intent || <span className="text-dim italic">no intent logged</span>}
           </div>
           {session.reality && (
@@ -1051,7 +1207,7 @@ function TasksTab({ tasks, setTasks, projects }) {
             onKeyDown={e => { if (e.key === "Enter") addTask(); }}
             placeholder="what needs to get done?"
             className="flex-1 bg-surface border border-border rounded-[6px] px-4 py-2.5 text-[13px] text-text outline-none focus:border-yellow/60 transition-colors"
-            style={{ fontFamily: "Fraunces, ui-serif, serif" }} />
+            style={{ fontFamily: "Lilex, ui-sans-serif, sans-serif" }} />
           <select value={newProjectId ?? ""}
             onChange={e => setNewProjectId(e.target.value ? Number(e.target.value) : null)}
             className="bg-surface border border-border rounded-[6px] px-3 py-2 text-[12px] text-sub font-mono outline-none focus:border-teal/60"
@@ -1212,9 +1368,11 @@ export default function App() {
   useEffect(() => {
     const tabs = ["daily", "hangar", "interview", "tasks"];
     const onKey = (e) => {
-      if (e.altKey && ["1","2","3","4"].includes(e.key)) {
+      // ⌘1–4 to switch tabs (⌥/Alt is intercepted by Tauri before reaching the webview)
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && ["1","2","3","4"].includes(e.key)) {
         e.preventDefault(); setActive(tabs[parseInt(e.key) - 1]);
       }
+      // ⌘⇧N for quick note
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "N") {
         e.preventDefault(); setQuickNoteOpen(true);
       }
