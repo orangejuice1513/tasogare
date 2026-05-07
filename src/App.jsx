@@ -295,6 +295,14 @@ function SessionPane({ projects, tasks, onSessionSaved, externalSession, running
   const [saving, setSaving]           = useState(false);
   const [err, setErr]                 = useState(null);
 
+  // Load ALL sessions from DB on mount so the full history always shows.
+  // Only seeds if sessions is empty — never overwrites an in-progress session.
+  useEffect(() => {
+    getSessions().then(all => {
+      setSessions(prev => prev.length === 0 ? all : prev);
+    }).catch(() => {});
+  }, []);
+
   // Absorb external sessions (quick notes)
   useEffect(() => {
     if (externalSession)
@@ -362,9 +370,14 @@ function SessionPane({ projects, tasks, onSessionSaved, externalSession, running
   };
 
   const selectedProject = projects.find(p => p.id === projectId);
-  const todaySessions   = sessions.filter(s => toLocalDateKey(s.timestamp) === toLocalDateKey(new Date().toISOString()));
-  const focusSec        = todaySessions.reduce((a,s) => a + s.duration_seconds, 0);
-  const engSessions     = todaySessions.filter(s => s.type === "Engineering").length;
+  // todaySessions derived from the sessions state (seeded from DB on mount + new saves)
+  const todaySessions = sessions.filter(s => toLocalDateKey(s.timestamp) === toLocalDateKey(new Date().toISOString()));
+  // focusSec: ALL session types count toward focus time (Routine homework counts!)
+  const focusSec      = todaySessions.reduce((a, s) => a + s.duration_seconds, 0);
+  // engSessions: only Engineering sessions count as "deliverables completed"
+  const engSessions   = todaySessions.filter(s => s.type === "Engineering").length;
+  // intentsSet: every session with a non-empty, non-quick-note intent
+  const intentsSet    = todaySessions.filter(s => s.intent && s.intent !== "Quick Note").length;
 
   const TYPE_META = {
     Routine:     { c: "var(--rose, #F5A9BB)", g: "RTN" },
@@ -524,6 +537,16 @@ function SessionPane({ projects, tasks, onSessionSaved, externalSession, running
 
         {/* Session log */}
         <section className="flex-1 min-h-0 flex flex-col">
+          {/* Header — matches TASKS · QUEUE format */}
+          <div className="flex items-center px-6 py-2 shrink-0" style={{ borderBottom: "1px solid var(--hl)" }}>
+            <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "var(--iris, #C4A7E7)" }}>
+              sessions · completed
+            </span>
+            <span className="ml-auto text-[10.5px]" style={{ color: "var(--dim)" }}>
+              {todaySessions.length} today
+            </span>
+          </div>
+          {/* Column headers */}
           <div className="grid grid-cols-[70px_50px_1fr_80px] text-[10px] uppercase tracking-[0.1em] shrink-0 py-2"
             style={{ color: "var(--dim)", borderBottom: "1px solid var(--hl)" }}>
             <div className="px-6">time</div>
@@ -624,9 +647,9 @@ function SessionPane({ projects, tasks, onSessionSaved, externalSession, running
         <div className="px-5 pt-4" style={{ borderBottom: "1px solid var(--hl)" }}>
           <div className="text-[10px] uppercase tracking-[0.14em] mb-3" style={{ color: "var(--sub)" }}>TODAY</div>
           {[
-            { label: "FOCUS TIME",            value: fmtHours(focusSec),           color: "var(--iris)" },
-            { label: "DELIVERABLES COMPLETED", value: pad(engSessions),             color: "var(--text)" },
-            { label: "INTENTS SET",            value: pad(todaySessions.length),    color: "var(--text)" },
+            { label: "FOCUS TIME",            value: fmtHours(focusSec),   color: "var(--iris)" },
+            { label: "DELIVERABLES COMPLETED", value: pad(engSessions),     color: "var(--text)" },
+            { label: "INTENTS SET",            value: pad(intentsSet),      color: "var(--text)" },
           ].map(({ label, value, color }) => (
             <div key={label} className="flex items-start justify-between py-3"
               style={{ borderBottom: "1px solid var(--hl)" }}>
