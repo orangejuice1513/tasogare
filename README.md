@@ -7,7 +7,7 @@
 
 ---
 
-![Daily Log](screenshot-daily-log.png)
+![History](screenshot-history.png)
 
 ---
 
@@ -20,12 +20,8 @@ There are three views:
 ### Daily Log
 Your main workspace. Write an intent, start the 90-minute focus timer, and log what actually happened when you stop. Tag sessions as `[Routine]` or `[Engineering]`. Engineering sessions can be linked to a project so hours accumulate automatically.
 
-![Projects](screenshot-projects.png)
-
 ### Projects
 Create long-running engineering projects with a name, a one-line summary, and a full architecture description — goals, blockers, open questions, whatever context you'd want six months from now. Projects show up in a dropdown when you start an Engineering session.
-
-![Interview Deck](screenshot-interview-deck.png)
 
 ### Interview Deck
 Every Engineering session, grouped by project. The architecture description sits at the top of each group to set context, followed by a chronological list of every session: intent, reality, notes, and total hours logged. Built so you can walk into any technical conversation and recall exactly what you built, when, and how long it took.
