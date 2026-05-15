@@ -9,6 +9,8 @@
 
 ![History](screenshot-history.png)
 
+![Daily Log](screenshot-daily-log.png)
+
 ---
 
 ## What it does
